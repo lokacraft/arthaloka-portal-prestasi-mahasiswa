@@ -1,65 +1,64 @@
-import Image from "next/image";
+import React from "react";
+import Link from "next/link";
+import { ArrowRight, Trophy, Award, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function OnboardingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fdfa] to-[#e6f7ed] flex flex-col items-center justify-center p-6 text-center">
+      <div className="max-w-3xl w-full flex flex-col items-center space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        {/* Logo/Icon Group */}
+        <div className="flex items-center justify-center space-x-4 mb-4">
+          <div className="h-16 w-16 bg-[#50c878] rounded-2xl flex items-center justify-center shadow-lg shadow-[#50c878]/30 rotate-12 transition-transform hover:rotate-0">
+            <Trophy className="h-8 w-8 text-white" strokeWidth={2.5} />
+          </div>
+          <div className="h-12 w-12 bg-[#006400] rounded-full flex items-center justify-center shadow-lg shadow-[#006400]/20 -translate-y-4">
+            <Award className="h-6 w-6 text-white" strokeWidth={2.5} />
+          </div>
+          <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center shadow-xl border border-gray-100 -rotate-6 transition-transform hover:rotate-0">
+            <Star className="h-7 w-7 text-[#50c878]" fill="#50c878" />
+          </div>
+        </div>
+
+        {/* Text Content */}
+        <div className="space-y-6">
+          <h1 className="text-4xl md:text-6xl font-extrabold text-[#1a1a1a] tracking-tight leading-tight">
+            Portal Prestasi <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#006400] to-[#50c878]">
+              Mahasiswa
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Sistem terintegrasi untuk mendata, memvalidasi, dan mengapresiasi
+            setiap pencapaian luar biasa Anda selama menjadi mahasiswa.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full pt-8">
+          <Link href="/sign-in" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full bg-[#006400] hover:bg-[#004d00] shadow-xl shadow-[#006400]/20 transition-all hover:scale-105 group">
+              Mulai Sekarang
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
+
+          <Link href="/sign-up" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full border-2 border-[#50c878] text-[#006400] hover:bg-[#50c878]/10 transition-all"
+            >
+              Daftar Akun Baru
+            </Button>
+          </Link>
         </div>
-      </main>
+
+        {/* Footer info */}
+        <div className="pt-16 text-sm text-gray-500 font-medium">
+          Dikelola oleh Direktorat Kemahasiswaan
+        </div>
+      </div>
     </div>
   );
 }
