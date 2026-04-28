@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "assets.rumahstruktur.arthaloka.technology", // atau ganti dengan domain cloudflare bucket Anda, misal: "imagedelivery.net"
+        hostname: "assets.portal-prestasi-mahasiswa.arthaloka.technology", // atau ganti dengan domain cloudflare bucket Anda, misal: "imagedelivery.net"
         pathname: "/**",
       },
     ],
