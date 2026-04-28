@@ -18,6 +18,7 @@ import { id as localeId } from "date-fns/locale";
 interface TopbarProps {
   userName?: string;
   userEmail?: string;
+  userId?: string;
 }
 
 export function Topbar({ userName: defaultName = "Ahmad Rizki", userEmail: defaultEmail = "user@example.com" }: TopbarProps) {
