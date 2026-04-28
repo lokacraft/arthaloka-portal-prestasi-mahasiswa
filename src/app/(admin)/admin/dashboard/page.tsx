@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import Link from 'next/link';
 import { Clock, CheckCircle2, XCircle, ArrowRight, Users, ClipboardCheck, TrendingUp } from 'lucide-react';

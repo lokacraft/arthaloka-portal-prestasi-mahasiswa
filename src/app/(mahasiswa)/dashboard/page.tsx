@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import React from "react";
 import Link from "next/link";
 import { Plus, Clock, CheckCircle2, XCircle, Trophy } from "lucide-react";
