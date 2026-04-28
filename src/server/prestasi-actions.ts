@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { Semester, TipePartisipasi } from "@/generated/prisma";
+import { Prisma, Semester, TipePartisipasi } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 
 // =====================================================================
@@ -93,7 +93,7 @@ export async function getAllPrestasiByMahasiswa(
   const { page = 1, perPage = 10, search, tahun, status } = options;
   const skip = (page - 1) * perPage;
 
-  const where: Parameters<typeof prisma.prestasi.findMany>[0]["where"] = {
+  const where: Prisma.PrestasiWhereInput = {
     mahasiswaId,
     ...(search ? { namaPrestasi: { contains: search, mode: "insensitive" } } : {}),
     ...(tahun ? { tahun } : {}),
@@ -195,6 +195,31 @@ export async function createPrestasi(input: CreatePrestasiInput) {
 
     revalidatePath("/dashboard");
     revalidatePath("/riwayat");
+
+    // NOTIFIKASI: Broadcast ke Admin
+    const mahasiswa = await prisma.mahasiswa.findUnique({
+      where: { id: input.mahasiswaId },
+      include: { user: true }
+    });
+
+    if (mahasiswa) {
+      const adminRoles = await prisma.userRole.findMany({
+        where: { role: { name: "ADMIN" } },
+        select: { userId: true }
+      });
+
+      if (adminRoles.length > 0) {
+        await prisma.notification.createMany({
+          data: adminRoles.map((admin) => ({
+            userId: admin.userId,
+            title: "Pengajuan Prestasi Baru",
+            message: `Ada pengajuan baru dari ${mahasiswa.user.name} - ${input.namaPrestasi}`,
+            type: "INFO",
+            linkUrl: `/admin/verifikasi/${prestasi.id}`,
+          }))
+        });
+      }
+    }
 
     return { success: true, id: prestasi.id };
   } catch (error) {

@@ -1,2 +1,9 @@
 import { NotifikasiContent } from "@/components/pages/notifikasi-content";
-export default function Page() { return <NotifikasiContent />; }
+
+export const metadata = {
+  title: "Notifikasi | Admin",
+};
+
+export default function AdminNotifikasiPage() {
+  return <NotifikasiContent />;
+}

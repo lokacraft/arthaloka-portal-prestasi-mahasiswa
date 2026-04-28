@@ -16,7 +16,7 @@ export async function validateAchievement(id: string, catatan: string, poin: num
   if (!session) return { error: "Unauthorized" };
 
   try {
-    await prisma.prestasi.update({
+    const prestasi = await prisma.prestasi.update({
       where: { id },
       data: {
         statusValidasi: 'APPROVED',
@@ -24,6 +24,31 @@ export async function validateAchievement(id: string, catatan: string, poin: num
         catatanValidasi: catatan,
         tanggalValidasi: new Date(),
         poin: poin
+      },
+      include: { mahasiswa: { select: { userId: true } } }
+    });
+
+    // Notify Mahasiswa
+    if (prestasi.mahasiswa?.userId) {
+      await prisma.notification.create({
+        data: {
+          userId: prestasi.mahasiswa.userId,
+          title: "Prestasi Disetujui",
+          message: `Prestasi '${prestasi.namaPrestasi}' telah disetujui. Catatan: ${catatan || '-'}`,
+          type: "SUCCESS",
+          linkUrl: `/riwayat`,
+        }
+      });
+    }
+
+    // Notify Admin (history log)
+    await prisma.notification.create({
+      data: {
+        userId: session.user.id,
+        title: "Riwayat Validasi",
+        message: `Anda telah menyetujui prestasi '${prestasi.namaPrestasi}'.`,
+        type: "INFO",
+        linkUrl: `/admin/verifikasi/${id}`,
       }
     });
 
@@ -48,13 +73,38 @@ export async function rejectAchievement(id: string, catatan: string) {
   if (!session) return { error: "Unauthorized" };
 
   try {
-    await prisma.prestasi.update({
+    const prestasi = await prisma.prestasi.update({
       where: { id },
       data: {
         statusValidasi: 'REJECTED',
         validatorId: session.user.id,
         catatanValidasi: catatan,
         tanggalValidasi: new Date(),
+      },
+      include: { mahasiswa: { select: { userId: true } } }
+    });
+
+    // Notify Mahasiswa
+    if (prestasi.mahasiswa?.userId) {
+      await prisma.notification.create({
+        data: {
+          userId: prestasi.mahasiswa.userId,
+          title: "Prestasi Ditolak",
+          message: `Prestasi '${prestasi.namaPrestasi}' ditolak. Catatan: ${catatan || '-'}`,
+          type: "ERROR",
+          linkUrl: `/riwayat`,
+        }
+      });
+    }
+
+    // Notify Admin (history log)
+    await prisma.notification.create({
+      data: {
+        userId: session.user.id,
+        title: "Riwayat Validasi",
+        message: `Anda telah menolak prestasi '${prestasi.namaPrestasi}'.`,
+        type: "WARNING",
+        linkUrl: `/admin/verifikasi/${id}`,
       }
     });
 

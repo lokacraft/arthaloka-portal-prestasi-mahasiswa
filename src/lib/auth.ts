@@ -10,8 +10,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  trustedOrigins: ["http://localhost:3000"], 
-  appName: "My App", // provide your app name. It'll be used as an issuer.
+  trustedOrigins: [process.env.BETTER_AUTH_URL || "http://localhost:3000"], 
+  appName: "Portal Prestasi Mahasiswa",
     plugins: [
         twoFactor() 
     ]

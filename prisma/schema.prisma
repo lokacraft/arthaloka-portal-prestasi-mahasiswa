@@ -34,6 +34,7 @@ model User {
   
   // Relasi Validasi (Admin/WD/Akreditasi yang memvalidasi)
   validasiPrestasi Prestasi[]  @relation("ValidatorPrestasi")
+  notifications    Notification[]
 
   @@map("user")
 }
@@ -273,3 +274,51 @@ enum TipePartisipasi {
   INDIVIDU
   TIM
 }
+
+// =====================================================================
+// DATA AKREDITASI (LAM TEKNIK)
+// =====================================================================
+
+model NmTs {
+  id              String   @id @default(cuid())
+  tahun           Int      @unique // Contoh: 2024, 2025, 2026
+  jumlahMahasiswa Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("nmts")
+}
+
+model TargetAkreditasi {
+  id          String   @id @default(cuid())
+  kodeTarget  String   @unique // Contoh: "RI", "RN", "RW"
+  nama        String   // Contoh: "Target Rasio Internasional"
+  nilaiPersen Float    // Contoh: 0.2, 2.0, 4.0
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("target_akreditasi")
+}
+
+// =====================================================================
+// NOTIFIKASI
+// =====================================================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String   @db.Text
+  type      String   // INFO, SUCCESS, WARNING, ERROR
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notification")
+}
+

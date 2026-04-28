@@ -129,10 +129,47 @@ export async function logoutAction() {
 
     // Membersihkan session cookie secara manual untuk memastikan user benar-benar logout
     (await cookies()).delete("better-auth.session_token");
+    (await cookies()).delete("app_role");
 
     return { success: true };
   } catch (error) {
     console.error("Logout Error:", error);
     return { error: "Terjadi kesalahan saat mencoba keluar." };
   }
+}
+
+export async function setLoginCookieAndGetRedirectUrl(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      userRoles: {
+        include: { role: true }
+      }
+    }
+  });
+
+  if (!user) return "/dashboard";
+
+  let mainRole = "MAHASISWA";
+  let redirectUrl = "/dashboard";
+
+  const hasAdmin = user.userRoles.some(ur => ur.role.name.toUpperCase() === "ADMIN");
+  const hasWD = user.userRoles.some(ur => ur.role.name.toUpperCase() === "WD");
+  const hasAkreditasi = user.userRoles.some(ur => ur.role.name.toUpperCase() === "AKREDITASI");
+
+  if (hasAdmin) {
+    mainRole = "ADMIN";
+    redirectUrl = "/admin/dashboard";
+  } else if (hasWD) {
+    mainRole = "WD";
+    redirectUrl = "/wd1/dashboard";
+  } else if (hasAkreditasi) {
+    mainRole = "AKREDITASI";
+    redirectUrl = "/akreditasi/dashboard";
+  }
+
+  const c = await cookies();
+  c.set("app_role", mainRole, { path: "/", httpOnly: true, sameSite: "lax" });
+
+  return redirectUrl;
 }

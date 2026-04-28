@@ -10,6 +10,7 @@ export interface CurrentUserInfo {
   email: string;
   nim: string;
   mahasiswaId: string;
+  image?: string | null;
 }
 
 /**
@@ -36,13 +37,38 @@ export async function getCurrentUser(): Promise<CurrentUserInfo | null> {
 
     return {
       userId: session.user.id,
-      name: mahasiswa.user.name,
-      email: mahasiswa.user.email,
-      nim: mahasiswa.nim,
-      mahasiswaId: mahasiswa.id,
+      name: session.user.name,
+      email: session.user.email,
+      nim: mahasiswa?.nim || "",
+      mahasiswaId: mahasiswa?.id || "",
+      image: session.user.image,
     };
   } catch (error) {
     console.error("getCurrentUser Error:", error);
     return null;
+  }
+}
+
+export async function updateUserProfile(data: { name?: string; image?: string }) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user?.id) return { error: "Not authenticated" };
+
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.image) updateData.image = data.image;
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: updateData,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("updateUserProfile Error:", error);
+    return { error: "Gagal menyimpan profil" };
   }
 }
