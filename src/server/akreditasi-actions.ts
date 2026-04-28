@@ -152,9 +152,9 @@ export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTa
 // DATA UNTUK GRAFIK & REKAP (HALAMAN AKREDITASI)
 // ============================================================================
 
-export async function getTrendPrestasi(tahunSasaran: number) {
+export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: number = 5) {
   try {
-    const startYear = tahunSasaran - 4; // 5 years: TS-4 to TS
+    const startYear = tahunSasaran - rentangTahun + 1;
     
     // Ambil data
     const prestasiList = await prisma.prestasi.findMany({
@@ -204,11 +204,15 @@ export async function getTrendPrestasi(tahunSasaran: number) {
 
 export async function getRekapLengkap({ 
   tahun, 
+  startYear,
+  endYear,
   kategoriId, 
   levelId, 
   angkatan 
 }: { 
   tahun?: number, 
+  startYear?: number,
+  endYear?: number,
   kategoriId?: string, 
   levelId?: string, 
   angkatan?: number 
@@ -216,7 +220,11 @@ export async function getRekapLengkap({
   try {
     const query: any = { statusValidasi: 'APPROVED' };
 
-    if (tahun) query.tahun = tahun;
+    if (startYear && endYear) {
+      query.tahun = { gte: startYear, lte: endYear };
+    } else if (tahun) {
+      query.tahun = tahun;
+    }
     if (levelId && levelId !== 'Semua') query.tingkatId = levelId;
     
     // Filter Kategori

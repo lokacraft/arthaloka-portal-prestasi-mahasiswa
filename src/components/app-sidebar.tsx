@@ -73,6 +73,7 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
+                      // @ts-expect-error asChild is valid for Slot
                       asChild
                       isActive={isActive}
                       tooltip={item.title}
@@ -99,6 +100,7 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
         <SidebarMenu>
           <SidebarMenuItem>
             <AlertDialog>
+              {/* @ts-expect-error asChild is valid for Slot */}
               <AlertDialogTrigger asChild>
                 <SidebarMenuButton 
                   className="h-11 px-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"

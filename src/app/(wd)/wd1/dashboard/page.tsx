@@ -48,17 +48,17 @@ export default function WdDashboardPage() {
       const [trend, nmts, targetData, details] = await Promise.all([
         getTrendPrestasi(ts, rm),
         getNmTs(ts),
-        getTargets(ts),
+        getTargets(),
         getRekapLengkap({ startYear: ts - rm + 1, endYear: ts })
       ]);
 
       setTrendData(trend);
-      if (nmts) setNmtsVal(nmts.nilai);
+      if (nmts && !Array.isArray(nmts)) setNmtsVal(nmts.jumlahMahasiswa);
       if (targetData) {
         setTargets({
-          RI: targetData.ri || 0.05,
-          RN: targetData.rn || 0.5,
-          RW: targetData.rw || 1.5
+          RI: targetData.find((t: any) => t.kodeTarget === 'RI')?.nilaiPersen || 0.05,
+          RN: targetData.find((t: any) => t.kodeTarget === 'RN')?.nilaiPersen || 0.5,
+          RW: targetData.find((t: any) => t.kodeTarget === 'RW')?.nilaiPersen || 1.5
         });
       }
 

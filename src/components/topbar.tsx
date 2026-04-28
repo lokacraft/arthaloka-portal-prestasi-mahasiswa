@@ -174,6 +174,7 @@ export function Topbar({ userName: defaultName = "Ahmad Rizki", userEmail: defau
             </div>
             
             <DropdownMenuItem
+              // @ts-expect-error asChild is valid for Slot
               asChild
               className="cursor-pointer py-2.5 px-3 rounded-lg hover:bg-gray-50 transition-colors group/item outline-none flex items-center"
             >

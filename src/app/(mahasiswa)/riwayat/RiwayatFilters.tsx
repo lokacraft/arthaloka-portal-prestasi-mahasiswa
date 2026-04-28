@@ -18,7 +18,7 @@ export function RiwayatFilters({ availableYears, currentTahun, currentStatus, cu
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
-  function navigate(overrides: Record<string, string | number | undefined>) {
+  function navigate(overrides: Record<string, string | number | null | undefined>) {
     const p = new URLSearchParams(searchParams.toString());
     p.set("page", "1");
     Object.entries(overrides).forEach(([k, v]) => {
@@ -64,7 +64,7 @@ export function RiwayatFilters({ availableYears, currentTahun, currentStatus, cu
 
       {/* Status */}
       <div className="w-full md:w-40">
-        <Select value={currentStatus ?? "all"} onValueChange={(v) => navigate({ status: v === "all" ? undefined : v })}>
+        <Select value={currentStatus || "all"} onValueChange={(v) => navigate({ status: v === "all" ? undefined : v })}>
           <SelectTrigger className="w-full bg-[#f8f9fa] border-gray-200 text-[14px]">
             <SelectValue placeholder="Semua Status" />
           </SelectTrigger>
