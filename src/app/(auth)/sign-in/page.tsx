@@ -53,7 +53,7 @@ export default function SignInPage() {
       return;
     }
 
-    if (data?.twoFactorRedirect) {
+    if ((data as any)?.twoFactorRedirect) {
       setSavedEmail(email);
       setIs2FA(true);
       toast.info("Otentikasi Dua Faktor (2FA) diperlukan.");
