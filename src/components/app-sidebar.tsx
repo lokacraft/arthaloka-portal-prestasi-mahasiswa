@@ -73,8 +73,7 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
-                      // @ts-expect-error asChild is valid for Slot
-                      asChild
+                      render={<Link href={item.url} />}
                       isActive={isActive}
                       tooltip={item.title}
                       className={`h-11 px-4 text-base transition-colors ${
@@ -83,10 +82,8 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
                           : "text-gray-700 hover:bg-emerald-50 hover:text-[#50C878]"
                       }`}
                     >
-                      <Link href={item.url}>
-                        <item.icon className="h-5 w-5 mr-3 shrink-0" />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
+                      <item.icon className="h-5 w-5 mr-3 shrink-0" />
+                      <span className="font-medium">{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -100,14 +97,13 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
         <SidebarMenu>
           <SidebarMenuItem>
             <AlertDialog>
-              {/* @ts-expect-error asChild is valid for Slot */}
-              <AlertDialogTrigger asChild>
-                <SidebarMenuButton 
-                  className="h-11 px-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                >
-                  <LogOut className="h-5 w-5 mr-3 shrink-0" />
-                  <span className="font-medium">Logout</span>
-                </SidebarMenuButton>
+              <AlertDialogTrigger 
+                render={
+                  <SidebarMenuButton className="h-11 px-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer" />
+                }
+              >
+                <LogOut className="h-5 w-5 mr-3 shrink-0" />
+                <span className="font-medium">Logout</span>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>

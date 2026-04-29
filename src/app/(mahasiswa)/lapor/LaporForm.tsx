@@ -27,18 +27,19 @@ import { id as localeId } from "date-fns/locale";
 
 interface KategoriItem { id: string; nama: string; }
 interface TingkatItem { id: string; nama: string; }
-interface TeamMember { nim: string; nama: string; }
+interface TeamMember { nim: string; nama: string; angkatan: string; }
 interface Wilayah { code: string; name: string; }
 
 const HASIL_OPTIONS = ["Juara 1", "Juara 2", "Juara 3", "Lainnya"];
 
 interface Props {
   mahasiswaId: string;
+  nim: string;
   kategoriList: KategoriItem[];
   tingkatList: TingkatItem[];
 }
 
-export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Props) {
+export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -47,13 +48,20 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
   const [showYearPicker, setShowYearPicker] = useState(false);
   const yearOptions = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
+  const [angkatan, setAngkatan] = useState<number>(new Date().getFullYear());
+  const [showAngkatanPicker, setShowAngkatanPicker] = useState(false);
+  const angkatanOptions = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i);
+
   const [semester, setSemester] = useState<"GANJIL" | "GENAP">("GANJIL");
   const [kategoriId, setKategoriId] = useState<string>(kategoriList[0]?.id ?? "");
+  const [jenisLomba, setJenisLomba] = useState<"BELMAWA" | "MANDIRI">("MANDIRI");
   const [tingkatId, setTingkatId] = useState<string>(tingkatList[0]?.id ?? "");
   const [namaPrestasi, setNamaPrestasi] = useState("");
   const [namaPenyelenggara, setNamaPenyelenggara] = useState("");
-  const [tanggal, setTanggal] = useState<Date | undefined>();
-  const [showTanggalPicker, setShowTanggalPicker] = useState(false);
+  const [tanggalMulai, setTanggalMulai] = useState<Date | undefined>();
+  const [tanggalSelesai, setTanggalSelesai] = useState<Date | undefined>();
+  const [showTanggalMulaiPicker, setShowTanggalMulaiPicker] = useState(false);
+  const [showTanggalSelesaiPicker, setShowTanggalSelesaiPicker] = useState(false);
   const [hasilSelect, setHasilSelect] = useState("Juara 1");
   const [hasilCustom, setHasilCustom] = useState("");
 
@@ -66,7 +74,7 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
 
   // Partisipasi
   const [isTim, setIsTim] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([{ nim: "", nama: "" }]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([{ nim: "", nama: "", angkatan: "" }]);
 
   // Confirmation Dialog
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -83,7 +91,7 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
   }, [isInternasional]);
 
   // Files
-  const [sertifikat, setSertifikat] = useState<File | null>(null);
+  const [sertifikats, setSertifikats] = useState<File[]>([]);
   const [buktiBukti, setBuktiBukti] = useState<File[]>([]);
 
   // Load provinces on mount via internal proxy (avoids CORS)
@@ -103,7 +111,7 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
       .catch(() => {});
   }, [provinsiCode]);
 
-  const addTeamMember = () => setTeamMembers([...teamMembers, { nim: "", nama: "" }]);
+  const addTeamMember = () => setTeamMembers([...teamMembers, { nim: "", nama: "", angkatan: "" }]);
   const removeTeamMember = (i: number) => setTeamMembers(teamMembers.filter((_, idx) => idx !== i));
   const updateTeamMember = (i: number, field: keyof TeamMember, val: string) => {
     const updated = [...teamMembers];
@@ -123,15 +131,33 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
       return;
     }
 
-    if (buktiBukti.length + incoming.length > 5) {
-      toast.error("Maksimal 5 file bukti pendukung."); return;
+    if (buktiBukti.length + incoming.length > 10) {
+      toast.error("Maksimal 10 file bukti pendukung."); return;
     }
     setBuktiBukti((prev) => [...prev, ...incoming]);
   };
 
+  const handleSertifikatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const incoming = Array.from(e.target.files);
+     // Validate types
+    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
+    const hasInvalid = incoming.some((f) => !validTypes.includes(f.type));
+    if (hasInvalid) {
+      toast.error("Hanya file PDF, JPG, atau PNG yang diperbolehkan.");
+      return;
+    }
+
+    if (sertifikats.length + incoming.length > 10) {
+      toast.error("Maksimal 10 file sertifikat."); return;
+    }
+    setSertifikats((prev) => [...prev, ...incoming]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tanggal) { toast.error("Tanggal pelaksanaan wajib diisi."); return; }
+    if (!tanggalMulai || !tanggalSelesai) { toast.error("Tanggal pelaksanaan (mulai & selesai) wajib diisi."); return; }
+    if (tanggalMulai > tanggalSelesai) { toast.error("Waktu mulai tidak boleh lebih dari waktu selesai."); return; }
     if (!namaPrestasi) { toast.error("Nama kegiatan wajib diisi."); return; }
     if (!namaPenyelenggara) { toast.error("Nama penyelenggara wajib diisi."); return; }
     const hasilCapaian = hasilSelect === "Lainnya" ? hasilCustom.trim() : hasilSelect;
@@ -146,13 +172,17 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
     
     startTransition(async () => {
       toast.loading("Mengupload file...", { id: "lapor-toast" });
-      let sertifikatUrl: string | undefined;
+      let sertifikatUrls: string[] | undefined;
       let buktiBuktiUrls: string[] | undefined;
 
-      if (sertifikat) {
-        const res = await uploadFileToR2(sertifikat, "sertifikat");
-        if ("error" in res) { toast.error(res.error, { id: "lapor-toast" }); return; }
-        sertifikatUrl = res.url;
+      if (sertifikats.length > 0) {
+        const urls: string[] = [];
+        for (const file of sertifikats) {
+          const res = await uploadFileToR2(file, "sertifikat");
+          if ("error" in res) { toast.error(`Gagal mengunggah ${file.name}: ${res.error}`, { id: "lapor-toast" }); return; }
+          urls.push(res.url);
+        }
+        sertifikatUrls = urls;
       }
       if (buktiBukti.length > 0) {
         const urls: string[] = [];
@@ -175,18 +205,21 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
         mahasiswaId,
         kategoriId,
         tingkatId,
+        angkatan,
         tahun,
         semester,
         namaPrestasi,
+        jenisLomba,
         namaPenyelenggara,
-        tanggalPelaksanaan: tanggal!,
+        tanggalMulai: tanggalMulai!,
+        tanggalSelesai: tanggalSelesai!,
         hasilCapaian,
         provinsi: provinsiName,
         kota: kotaName,
         namaLokasi: namaLokasi || undefined,
         tipePartisipasi: isTim ? "TIM" : "INDIVIDU",
-        anggotaTim: isTim ? teamMembers.filter((m) => m.nim || m.nama) : undefined,
-        sertifikatUrl,
+        anggotaTim: isTim ? teamMembers.filter((m) => m.nim || m.nama).map(m => ({ ...m, angkatan: parseInt(m.angkatan) || new Date().getFullYear() })) : undefined,
+        sertifikatUrls,
         buktiBuktiUrls,
       });
 
@@ -210,6 +243,39 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-7">
+
+          {/* Row 0: NIM & Angkatan */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[14px] font-semibold text-[#1a1a1a]">NIM Mahasiswa</label>
+              <input type="text" value={nim} readOnly className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[14px] font-semibold text-[#1a1a1a]">Angkatan</label>
+              <Popover open={showAngkatanPicker} onOpenChange={setShowAngkatanPicker}>
+                <PopoverTrigger>
+                  <button type="button" className={`${inputClass} flex items-center justify-between`}>
+                    <span>{angkatan}</span>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2">
+                  <div className="grid grid-cols-2 gap-1">
+                    {angkatanOptions.map((y) => (
+                      <button
+                        key={y}
+                        type="button"
+                        onClick={() => { setAngkatan(y); setShowAngkatanPicker(false); }}
+                        className={`px-3 py-2 rounded-lg text-[14px] font-medium transition-colors ${angkatan === y ? "bg-[#006400] text-white" : "hover:bg-gray-100 text-gray-700"}`}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
 
           {/* Row 1: Tahun & Semester */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -276,6 +342,19 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
             </RadioGroup>
           </div>
 
+          {/* Jenis Lomba */}
+          <div className="space-y-3">
+            <label className="text-[14px] font-semibold text-[#1a1a1a] block">Jenis Lomba</label>
+            <RadioGroup value={jenisLomba} onValueChange={(v) => v && setJenisLomba(v as "BELMAWA" | "MANDIRI")} className="flex gap-6">
+              {(["BELMAWA", "MANDIRI"] as const).map((j) => (
+                <div key={j} className="flex items-center space-x-2">
+                  <RadioGroupItem value={j} id={`jenis-${j}`} className="data-[state=checked]:border-[#50c878] data-[state=checked]:bg-[#50c878]" />
+                  <label htmlFor={`jenis-${j}`} className="text-[15px] text-gray-700 cursor-pointer">{j}</label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
           {/* Tingkat */}
           <div className="space-y-3">
             <label className="text-[14px] font-semibold text-[#1a1a1a] block">Tingkat / Level</label>
@@ -312,26 +391,49 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
           </div>
 
           {/* Tanggal Pelaksanaan */}
-          <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Tanggal Pelaksanaan</label>
-            <Popover open={showTanggalPicker} onOpenChange={setShowTanggalPicker}>
-              <PopoverTrigger>
-                <button type="button" className={`${inputClass} flex items-center gap-3 text-left`}>
-                  <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" />
-                  <span className={tanggal ? "text-gray-800" : "text-gray-400"}>
-                    {tanggal ? format(tanggal, "d MMMM yyyy", { locale: localeId }) : "Pilih tanggal pelaksanaan"}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={tanggal}
-                  onSelect={(d) => { setTanggal(d); setShowTanggalPicker(false); }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[14px] font-semibold text-[#1a1a1a]">Waktu Mulai</label>
+              <Popover open={showTanggalMulaiPicker} onOpenChange={setShowTanggalMulaiPicker}>
+                <PopoverTrigger>
+                  <button type="button" className={`${inputClass} flex items-center gap-3 text-left w-full`}>
+                    <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" />
+                    <span className={tanggalMulai ? "text-gray-800" : "text-gray-400"}>
+                      {tanggalMulai ? format(tanggalMulai, "d MMMM yyyy", { locale: localeId }) : "Pilih waktu mulai"}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={tanggalMulai}
+                    onSelect={(d) => { setTanggalMulai(d); setShowTanggalMulaiPicker(false); }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[14px] font-semibold text-[#1a1a1a]">Waktu Selesai</label>
+              <Popover open={showTanggalSelesaiPicker} onOpenChange={setShowTanggalSelesaiPicker}>
+                <PopoverTrigger>
+                  <button type="button" className={`${inputClass} flex items-center gap-3 text-left w-full`}>
+                    <CalendarIcon className="h-5 w-5 text-gray-400 shrink-0" />
+                    <span className={tanggalSelesai ? "text-gray-800" : "text-gray-400"}>
+                      {tanggalSelesai ? format(tanggalSelesai, "d MMMM yyyy", { locale: localeId }) : "Pilih waktu selesai"}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={tanggalSelesai}
+                    onSelect={(d) => { setTanggalSelesai(d); setShowTanggalSelesaiPicker(false); }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Tempat Pelaksanaan */}
@@ -386,8 +488,9 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
                 <label className="text-[14px] font-semibold text-[#1a1a1a]">Anggota Tim</label>
                 {teamMembers.map((member, index) => (
                   <div key={index} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                    <input type="text" value={member.nim} onChange={(e) => updateTeamMember(index, "nim", e.target.value)} placeholder="NIM anggota" className="flex-1 bg-white text-gray-800 placeholder-gray-400 text-[14px] rounded-lg px-4 h-11 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50" />
-                    <input type="text" value={member.nama} onChange={(e) => updateTeamMember(index, "nama", e.target.value)} placeholder="Nama lengkap anggota" className="flex-[2] bg-white text-gray-800 placeholder-gray-400 text-[14px] rounded-lg px-4 h-11 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50" />
+                    <input type="text" value={member.nim} onChange={(e) => updateTeamMember(index, "nim", e.target.value)} placeholder="NIM" className="flex-1 bg-white text-gray-800 placeholder-gray-400 text-[14px] rounded-lg px-4 h-11 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50" />
+                    <input type="text" value={member.nama} onChange={(e) => updateTeamMember(index, "nama", e.target.value)} placeholder="Nama lengkap" className="flex-[2] bg-white text-gray-800 placeholder-gray-400 text-[14px] rounded-lg px-4 h-11 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50" />
+                    <input type="text" value={member.angkatan} onChange={(e) => updateTeamMember(index, "angkatan", e.target.value.replace(/\D/g, '').slice(0,4))} placeholder="Angkatan" className="w-24 bg-white text-gray-800 placeholder-gray-400 text-[14px] rounded-lg px-4 h-11 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50" />
                     <Button type="button" variant="ghost" onClick={() => removeTeamMember(index)} disabled={teamMembers.length === 1} className="h-11 w-11 p-0 text-red-400 hover:text-red-600 hover:bg-red-50">
                       <X className="h-5 w-5" />
                     </Button>
@@ -402,58 +505,47 @@ export default function LaporForm({ mahasiswaId, kategoriList, tingkatList }: Pr
 
           {/* Sertifikat */}
           <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat (1 file, PDF/JPG/PNG, Maks 5MB)</label>
-            {sertifikat ? (
-              <div className="border border-gray-200 rounded-xl p-3 bg-white flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center">
-                    {sertifikat.type.includes("image") ? (
-                      <ImageIcon className="h-5 w-5 text-[#50c878]" />
-                    ) : (
-                      <FileText className="h-5 w-5 text-[#50c878]" />
-                    )}
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat (Maks. 10 file, PDF/JPG/PNG)</label>
+            <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${sertifikats.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleSertifikatChange} disabled={sertifikats.length >= 10} />
+              <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
+              <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih sertifikat</span>
+              <span className="text-[13px] text-gray-400 mt-1">{sertifikats.length}/10 file dipilih (maks. 5MB per file)</span>
+            </label>
+            {sertifikats.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {sertifikats.map((f, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-xl p-3 bg-white flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center">
+                        {f.type.includes("image") ? (
+                          <ImageIcon className="h-4 w-4 text-[#50c878]" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-[#50c878]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-gray-900 truncate max-w-xs">{f.name}</p>
+                        <p className="text-[11px] text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setSertifikats((prev) => prev.filter((_, i) => i !== idx))} className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg">
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-[14px] font-semibold text-gray-900 truncate max-w-xs">{sertifikat.name}</p>
-                    <p className="text-[12px] text-gray-500">{(sertifikat.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                </div>
-                <button type="button" onClick={() => setSertifikat(null)} className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
+                ))}
               </div>
-            ) : (
-              <label className="w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] hover:border-[#50c878]/50 hover:bg-gray-50 transition-colors cursor-pointer">
-                <input 
-                  type="file" 
-                  accept=".pdf,.png,.jpg,.jpeg" 
-                  className="hidden" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
-                    if (!validTypes.includes(file.type)) {
-                      toast.error("Hanya file PDF, JPG, atau PNG yang diperbolehkan.");
-                      return;
-                    }
-                    setSertifikat(file);
-                  }} 
-                />
-                <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
-                <span className="text-[14px] font-semibold text-[#50c878]">Klik untuk pilih sertifikat</span>
-                <span className="text-[13px] text-gray-400 mt-1">PDF, JPG, PNG (maks. 5MB)</span>
-              </label>
             )}
           </div>
 
           {/* Bukti Pendukung */}
           <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung (maks. 5 file)</label>
-            <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${buktiBukti.length >= 5 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 5} />
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung (Maks. 10 file)</label>
+            <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${buktiBukti.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 10} />
               <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
               <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih</span>
-              <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/5 file dipilih</span>
+              <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/10 file dipilih</span>
             </label>
             {buktiBukti.length > 0 && (
               <div className="mt-3 space-y-2">

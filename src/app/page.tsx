@@ -56,7 +56,7 @@ export default function OnboardingPage() {
 
         {/* Footer info */}
         <div className="pt-16 text-sm text-gray-500 font-medium">
-          Dikelola oleh Direktorat Kemahasiswaan
+          Dikelola oleh Kemahasiswaan Fakultas Rekayasa Industri (FRI) Telkom University
         </div>
       </div>
     </div>

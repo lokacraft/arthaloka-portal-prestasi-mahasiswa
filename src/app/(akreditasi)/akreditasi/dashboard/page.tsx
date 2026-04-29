@@ -38,7 +38,7 @@ export default function DashboardAkreditasiPage() {
 
   // Filters
   const [tahunSasaran, setTahunSasaran] = useState(currentYear.toString());
-  const [rentangMode, setRentangMode] = useState<'3'|'5'>('3');
+  const [rentangMode, setRentangMode] = useState<'5'>('5');
   const [kategoriFilter, setKategoriFilter] = useState('Semua');
   const [levelFilter, setLevelFilter] = useState('Semua');
 
@@ -258,7 +258,6 @@ export default function DashboardAkreditasiPage() {
                 <SelectValue placeholder="Rentang" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="3">3 Tahun Terakhir</SelectItem>
                 <SelectItem value="5">5 Tahun Terakhir</SelectItem>
               </SelectContent>
             </Select>

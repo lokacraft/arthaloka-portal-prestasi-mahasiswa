@@ -43,7 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <SidebarProvider>
       <AppSidebar role="admin" />
       <SidebarInset className="bg-gray-50 flex flex-col min-h-screen">
-        <Topbar userName={session.user.name} userId={session.user.id} />
+        <Topbar userName={session.user.name} userEmail={session.user.email} userId={session.user.id} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

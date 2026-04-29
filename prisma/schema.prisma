@@ -220,13 +220,16 @@ model Prestasi {
   tingkat            TingkatPrestasi  @relation(fields: [tingkatId], references: [id])
 
   // Waktu Kegiatan
+  angkatan           Int              // Angkatan mahasiswa saat kegiatan
   tahun              Int              // Tahun pelaksanaan kegiatan
   semester           Semester         @default(GANJIL)
 
   // Detail Prestasi
   namaPrestasi       String           // Contoh: "Juara 1 Lomba Cerdas Cermat"
+  jenisLomba         JenisLomba       @default(MANDIRI)
   namaPenyelenggara  String           // Contoh: "Kementerian Pendidikan"
-  tanggalPelaksanaan DateTime
+  tanggalMulai       DateTime
+  tanggalSelesai     DateTime
   hasilCapaian       String           // Contoh: "Juara 1", "Juara 2", atau capaian lainnya (max 250)
 
   // Tempat Pelaksanaan
@@ -239,8 +242,8 @@ model Prestasi {
   anggotaTim         Json?            // Array of { nim: string, nama: string } jika TIM
 
   // Berkas Bukti
-  sertifikatUrl      String?          // URL sertifikat (1 file) di R2
-  buktiBuktiUrls     Json?            // Array URL bukti pendukung (max 5 file) di R2
+  sertifikatUrls     Json?            // Array URL sertifikat (max 10 file) di R2
+  buktiBuktiUrls     Json?            // Array URL bukti pendukung (max 10 file) di R2
   keterangan         String?          @db.Text
 
   // Poin akhir yang dihitung/disetujui
@@ -273,6 +276,11 @@ enum Semester {
 enum TipePartisipasi {
   INDIVIDU
   TIM
+}
+
+enum JenisLomba {
+  BELMAWA
+  MANDIRI
 }
 
 // =====================================================================

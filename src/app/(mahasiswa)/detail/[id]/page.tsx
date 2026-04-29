@@ -42,8 +42,9 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
   const prestasi = await getPrestasiById(id);
   if (!prestasi || prestasi.mahasiswaId !== user.mahasiswaId) notFound();
 
-  const anggotaTim = prestasi.anggotaTim as { nim: string; nama: string }[] | null;
+  const anggotaTim = prestasi.anggotaTim as { nim: string; nama: string; angkatan: number }[] | null;
   const buktiBuktiUrls = prestasi.buktiBuktiUrls as string[] | null;
+  const sertifikatUrls = prestasi.sertifikatUrls as string[] | null;
   const tempatLengkap = [prestasi.namaLokasi, prestasi.kota, prestasi.provinsi].filter(Boolean).join(", ");
 
   return (
@@ -65,11 +66,13 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
             <StatusBadge status={prestasi.statusValidasi} />
           </div>
           <div className="px-6 pb-6">
-            <DetailRow label="Kategori" value={prestasi.kategori.nama} />
-            <DetailRow label="Tingkat / Level" value={prestasi.tingkat.nama} />
+            <DetailRow label="Angkatan" value={prestasi.angkatan.toString()} />
             <DetailRow label="Tahun Kegiatan" value={`${prestasi.tahun} — Semester ${prestasi.semester}`} />
+            <DetailRow label="Kategori" value={prestasi.kategori.nama} />
+            <DetailRow label="Jenis Lomba" value={prestasi.jenisLomba} />
+            <DetailRow label="Tingkat / Level" value={prestasi.tingkat.nama} />
             <DetailRow label="Hasil / Capaian" value={prestasi.hasilCapaian} />
-            <DetailRow label="Tanggal Pelaksanaan" value={format(new Date(prestasi.tanggalPelaksanaan), "EEEE, d MMMM yyyy", { locale: localeId })} />
+            <DetailRow label="Tanggal Pelaksanaan" value={`${format(new Date(prestasi.tanggalMulai), "d MMMM yyyy", { locale: localeId })} - ${format(new Date(prestasi.tanggalSelesai), "d MMMM yyyy", { locale: localeId })}`} />
             <DetailRow label="Tempat Pelaksanaan" value={tempatLengkap || undefined} />
             <DetailRow label="Tipe Partisipasi" value={prestasi.tipePartisipasi === "INDIVIDU" ? "Individu" : "Regu / Tim"} />
             <DetailRow label="Keterangan" value={prestasi.keterangan ?? undefined} />
@@ -79,25 +82,19 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
 
         {/* Side Cards */}
         <div className="flex flex-col gap-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-5 flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-[13px] font-medium">Poin Diperoleh</p>
-              <p className="text-3xl font-bold text-[#006400] mt-0.5">{prestasi.poin}</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-[#eafaf1] flex items-center justify-center">
-              <Trophy className="h-6 w-6 text-[#50c878]" />
-            </div>
-          </div>
-
-          {prestasi.sertifikatUrl && (
+          {sertifikatUrls && sertifikatUrls.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-5">
               <div className="flex items-center gap-2 mb-3">
                 <FileText className="h-4 w-4 text-gray-500" />
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat</span>
+                <span className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat ({sertifikatUrls.length})</span>
               </div>
-              <a href={prestasi.sertifikatUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[14px] text-[#50c878] hover:text-[#006400] font-medium transition-colors">
-                <ExternalLink className="h-4 w-4" />Lihat Sertifikat
-              </a>
+              <div className="space-y-2">
+                {sertifikatUrls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] text-[#50c878] hover:text-[#006400] transition-colors">
+                    <ExternalLink className="h-3.5 w-3.5" />Lihat Sertifikat {i + 1}
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
@@ -127,7 +124,7 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
                 {anggotaTim.map((m, i) => (
                   <div key={i} className="text-[13px]">
                     <span className="font-medium text-gray-800">{m.nama}</span>
-                    <span className="text-gray-500 ml-2">({m.nim})</span>
+                    <span className="text-gray-500 ml-2">({m.nim}) - Angkatan {m.angkatan}</span>
                   </div>
                 ))}
               </div>

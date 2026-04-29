@@ -68,8 +68,13 @@ export default async function AntreanVerifikasiPage({ searchParams }: PageProps)
                         </span>
                       )}
                     </div>
-                    <p className="text-[14px] text-gray-500 mt-1">{p.mahasiswa.user.name} ({p.mahasiswa.nim})</p>
+                    <p className="text-[14px] text-gray-500 mt-1">{p.mahasiswa.user.name} ({p.mahasiswa.nim}) • Angkatan {p.angkatan || '-'}</p>
                     <div className="flex flex-wrap gap-2 mt-4">
+                      {p.jenisLomba && (
+                        <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-[13px] font-medium border border-orange-100/50">
+                          {p.jenisLomba}
+                        </span>
+                      )}
                       <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[13px] font-medium">{p.kategori.nama}</span>
                       <span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-[13px] font-medium">{p.tingkat.nama}</span>
                       <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[13px] font-medium">{p.tahun} - Semester {p.semester}</span>

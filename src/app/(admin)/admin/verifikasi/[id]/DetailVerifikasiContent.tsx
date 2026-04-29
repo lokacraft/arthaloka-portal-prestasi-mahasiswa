@@ -122,9 +122,7 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
                 <p className="text-[14px] font-medium italic">"{prestasi.catatanValidasi}"</p>
               </div>
             )}
-            {prestasi.statusValidasi === 'APPROVED' && (
-              <p className="text-[14px] mt-2 font-bold underline">Poin yang diberikan: {prestasi.poin}</p>
-            )}
+
           </div>
         </div>
       )}
@@ -162,7 +160,7 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
           <div><span className="text-[13px] text-gray-500 font-medium block">Penyelenggara</span><span className="text-[15px] font-medium text-gray-900 mt-1 block">{prestasi.namaPenyelenggara}</span></div>
           <div><span className="text-[13px] text-gray-500 font-medium block">Hasil/Capaian</span><span className="text-[15px] font-medium text-[#50c878] mt-1 block">{prestasi.hasilCapaian}</span></div>
           <div><span className="text-[13px] text-gray-500 font-medium block">Tahun / Semester</span><span className="text-[15px] font-medium text-gray-900 mt-1 block">{prestasi.tahun} - {prestasi.semester}</span></div>
-          <div><span className="text-[13px] text-gray-500 font-medium block">Tanggal Kegiatan</span><span className="text-[15px] font-medium text-gray-900 mt-1 flex items-center gap-2"><Calendar className="h-4 w-4 text-gray-400"/>{format(prestasi.tanggalPelaksanaan, 'dd MMM yyyy', { locale: localeId })}</span></div>
+          <div><span className="text-[13px] text-gray-500 font-medium block">Tanggal Kegiatan</span><span className="text-[15px] font-medium text-gray-900 mt-1 flex items-center gap-2"><Calendar className="h-4 w-4 text-gray-400"/>{format(prestasi.tanggalMulai, 'dd MMM', { locale: localeId })} - {format(prestasi.tanggalSelesai, 'dd MMM yyyy', { locale: localeId })}</span></div>
           <div className="col-span-full"><span className="text-[13px] text-gray-500 font-medium block">Lokasi</span><span className="text-[15px] font-medium text-gray-900 mt-1 flex items-center gap-2"><MapPin className="h-4 w-4 text-gray-400"/>{prestasi.provinsi}, {prestasi.kota} - {prestasi.namaLokasi}</span></div>
           {prestasi.keterangan && (
             <div className="col-span-full"><span className="text-[13px] text-gray-500 font-medium block">Deskripsi</span><p className="text-[15px] text-gray-600 mt-1 leading-relaxed">{prestasi.keterangan}</p></div>
@@ -187,25 +185,33 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
       <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)]">
         <h2 className="text-[16px] font-bold text-gray-900 mb-6">Bukti Pendukung</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Main Certificate */}
-          <div className="border-2 border-dashed border-[#50c878]/30 bg-[#50c878]/5 rounded-2xl p-6 flex flex-col items-center gap-3">
-            <FileText className="h-10 w-10 text-[#50c878]" />
-            <div className="text-center">
-              <span className="text-[15px] font-semibold text-gray-900 block">Sertifikat Utama</span>
-              <span className="text-[12px] text-gray-500 truncate max-w-[200px]">
-                {prestasi.sertifikatUrl?.split('/').pop() || 'File Sertifikat'}
+          {/* Sertifikat Files */}
+          {prestasi.sertifikatUrls && (prestasi.sertifikatUrls as string[]).length > 0 && (
+            <div className="border border-gray-100 bg-gray-50/50 rounded-2xl p-6">
+              <span className="text-[14px] font-bold text-gray-700 block mb-4 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-[#50c878]" /> Sertifikat ({(prestasi.sertifikatUrls as string[]).length})
               </span>
+              <div className="space-y-3">
+                {(prestasi.sertifikatUrls as string[]).map((url, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="text-[13px] text-gray-600 truncate">{url.split('/').pop() || `Sertifikat ${i+1}`}</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setSelectedFile(url);
+                        setPreviewOpen(true);
+                      }}
+                      className="text-[#50c878] text-[12px] font-bold hover:underline shrink-0 ml-2"
+                    >
+                      Buka
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button 
-              onClick={() => {
-                setSelectedFile(prestasi.sertifikatUrl);
-                setPreviewOpen(true);
-              }} 
-              className="text-[#50c878] font-bold text-[14px] hover:underline mt-2 bg-white px-4 py-2 rounded-lg border border-[#50c878]/20 shadow-sm"
-            >
-              Lihat Sertifikat
-            </button>
-          </div>
+          )}
 
           {/* Evidence Files */}
           {prestasi.buktiBuktiUrls && (prestasi.buktiBuktiUrls as string[]).length > 0 && (
@@ -416,11 +422,7 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
             <p className="text-[14px] text-gray-500">Prestasi: <span className="text-gray-900 font-medium">{prestasi.namaPrestasi}</span></p>
           </div>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Bobot Poin</Label>
-              <Input type="number" value={poin} onChange={(e) => setPoin(parseInt(e.target.value))} />
-              <p className="text-[12px] text-gray-400">Default poin untuk {prestasi.tingkat.nama} adalah {prestasi.tingkat.bobotPoin}</p>
-            </div>
+
             <div className="space-y-2">
               <Label>Catatan (Opsional)</Label>
               <Textarea 

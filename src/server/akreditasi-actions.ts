@@ -241,12 +241,7 @@ export async function getRekapLengkap({
 
     // Filter Angkatan Mahasiswa
     if (angkatan) {
-      // Assuming NIM format or need to fetch Mahasiswa first?
-      // Since 'angkatan' is not directly in Mahasiswa model, 
-      // let's try to infer it from NIM. Usually NIM first 2 or 4 digits.
-      // But for now, since it's hard to parse string reliably in Prisma where,
-      // we might have to filter in JS or skip if Angkatan is not in schema.
-      // I'll filter it in JS after fetching for safety if 'angkatan' is provided.
+      query.angkatan = angkatan;
     }
 
     let data = await prisma.prestasi.findMany({
@@ -258,11 +253,6 @@ export async function getRekapLengkap({
       },
       orderBy: { tahun: 'desc' }
     });
-
-    if (angkatan) {
-      // Very basic NIM inference for angkatan (e.g. 2023 from '23xxxxx' or '2023xxxx')
-      data = data.filter(d => d.mahasiswa.nim.includes(angkatan.toString().slice(-2)));
-    }
 
     return data;
   } catch (error) {

@@ -139,7 +139,7 @@ export default async function DashboardMahasiswa({
                         <StatusBadge status={p.statusValidasi} />
                       </td>
                       <td className="p-4 pr-6 text-gray-500 whitespace-nowrap">
-                        {new Date(p.tanggalPelaksanaan).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                        {new Date(p.tanggalMulai).toLocaleDateString("id-ID", { dateStyle: "medium" })}
                       </td>
                       <td className="p-4 pr-6">
                         <Link href={`/detail/${p.id}`} className="text-[#50c878] hover:text-[#006400] font-medium text-[14px] transition-colors">

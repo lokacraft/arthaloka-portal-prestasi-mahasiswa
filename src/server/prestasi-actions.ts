@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { Prisma, Semester, TipePartisipasi } from "@/generated/prisma/client";
+import { Prisma, Semester, TipePartisipasi, JenisLomba } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 
 // =====================================================================
@@ -20,16 +20,19 @@ export interface CreatePrestasiInput {
   tingkatId: string;
   tahun: number;
   semester: Semester;
+  angkatan: number;
+  jenisLomba: JenisLomba;
   namaPrestasi: string;
   namaPenyelenggara: string;
-  tanggalPelaksanaan: Date;
+  tanggalMulai: Date;
+  tanggalSelesai: Date;
   hasilCapaian: string;
   provinsi?: string;
   kota?: string;
   namaLokasi?: string;
   tipePartisipasi: TipePartisipasi;
-  anggotaTim?: { nim: string; nama: string }[];
-  sertifikatUrl?: string;
+  anggotaTim?: { nim: string; nama: string; angkatan: number }[];
+  sertifikatUrls?: string[];
   buktiBuktiUrls?: string[];
   keterangan?: string;
 }
@@ -175,18 +178,21 @@ export async function createPrestasi(input: CreatePrestasiInput) {
         mahasiswaId: input.mahasiswaId,
         kategoriId: input.kategoriId,
         tingkatId: input.tingkatId,
+        angkatan: input.angkatan,
         tahun: input.tahun,
         semester: input.semester,
         namaPrestasi: input.namaPrestasi,
+        jenisLomba: input.jenisLomba,
         namaPenyelenggara: input.namaPenyelenggara,
-        tanggalPelaksanaan: input.tanggalPelaksanaan,
+        tanggalMulai: input.tanggalMulai,
+        tanggalSelesai: input.tanggalSelesai,
         hasilCapaian: input.hasilCapaian,
         provinsi: input.provinsi,
         kota: input.kota,
         namaLokasi: input.namaLokasi,
         tipePartisipasi: input.tipePartisipasi,
         anggotaTim: input.anggotaTim ?? undefined,
-        sertifikatUrl: input.sertifikatUrl,
+        sertifikatUrls: input.sertifikatUrls ?? undefined,
         buktiBuktiUrls: input.buktiBuktiUrls ?? undefined,
         keterangan: input.keterangan,
         statusValidasi: "PENDING",

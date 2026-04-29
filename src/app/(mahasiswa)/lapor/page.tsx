@@ -17,6 +17,7 @@ export default async function LaporPrestasiPage() {
   return (
     <LaporForm
       mahasiswaId={user.mahasiswaId}
+      nim={user.nim}
       kategoriList={kategoriList}
       tingkatList={tingkatList}
     />

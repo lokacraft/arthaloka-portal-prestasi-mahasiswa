@@ -78,9 +78,7 @@ export default function RekapPage() {
     }
 
     if (angkatan !== 'Semua') {
-      // Basic NIM inference (last 2 digits matching angkatan last 2 digits)
-      const angkatanSuffix = angkatan.slice(-2);
-      result = result.filter(d => d.mahasiswa.nim.includes(angkatanSuffix));
+      result = result.filter(d => d.angkatan && d.angkatan.toString() === angkatan);
     }
 
     setFilteredData(result);
@@ -101,11 +99,16 @@ export default function RekapPage() {
         "Tahun": d.tahun,
         "Semester": d.semester,
         "Nama Kegiatan": d.namaPrestasi,
+        "Jenis Lomba": d.jenisLomba || "N/A",
         "Penyelenggara": d.namaPenyelenggara,
         "Nama Mahasiswa": d.mahasiswa?.user?.name || "N/A",
         "NIM": d.mahasiswa?.nim || "N/A",
-        "Kategori": d.kategori.nama,
-        "Level": d.tingkat.nama,
+        "Angkatan": d.angkatan || "N/A",
+        "Kategori": d.kategori?.nama || "N/A",
+        "Level": d.tingkat?.nama || "N/A",
+        "Tanggal Mulai": d.tanggalMulai ? new Date(d.tanggalMulai).toLocaleDateString("id-ID") : "N/A",
+        "Tanggal Selesai": d.tanggalSelesai ? new Date(d.tanggalSelesai).toLocaleDateString("id-ID") : "N/A",
+        "URL Sertifikat": d.sertifikatUrls && Array.isArray(d.sertifikatUrls) && d.sertifikatUrls.length > 0 ? (d.sertifikatUrls as string[]).join(", ") : "Tidak ada",
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -210,7 +213,7 @@ export default function RekapPage() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50/50 border-b border-gray-100">
               <tr>
-                {['No','Tahun','Semester','Nama Kegiatan','Penyelenggara','Mahasiswa (NIM)','Kategori', 'Level', 'Aksi'].map(h => (
+                {['No','Tahun','Semester','Nama Kegiatan','Jenis Lomba','Penyelenggara','Mahasiswa (NIM)','Angkatan','Kategori', 'Level', 'Aksi'].map(h => (
                   <th key={h} className="text-left py-4 px-4 text-[13px] font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -222,11 +225,13 @@ export default function RekapPage() {
                   <td className="py-4 px-4 text-[14px] font-medium text-gray-900">{row.tahun}</td>
                   <td className="py-4 px-4 text-[14px] text-gray-700">{row.semester}</td>
                   <td className="py-4 px-4 text-[14px] text-gray-900 max-w-[200px] truncate">{row.namaPrestasi}</td>
+                  <td className="py-4 px-4 text-[13px] text-gray-700"><span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full text-[12px] font-medium border border-gray-200">{row.jenisLomba}</span></td>
                   <td className="py-4 px-4 text-[13px] text-gray-600 truncate max-w-[150px]">{row.namaPenyelenggara}</td>
                   <td className="py-4 px-4 text-[14px]">
-                    <p className="font-medium text-gray-800 truncate max-w-[150px]">{"Mahasiswa"}</p>
+                    <p className="font-medium text-gray-800 truncate max-w-[150px]">{row.mahasiswa?.user?.name || "Mahasiswa"}</p>
                     <p className="text-gray-400 text-[12px]">({row.mahasiswa?.nim})</p>
                   </td>
+                  <td className="py-4 px-4 text-[14px] text-gray-700">{row.angkatan}</td>
                   <td className="py-4 px-4 text-[14px] text-gray-700">{row.kategori?.nama}</td>
                   <td className="py-4 px-4">
                     <span className={`text-[12px] font-semibold px-3 py-1 rounded-full border ${
@@ -241,7 +246,7 @@ export default function RekapPage() {
                 </tr>
               ))}
               {filteredData.length === 0 && !loading && (
-                <tr><td colSpan={9} className="py-12 text-center text-gray-400 text-[14px]">Tidak ada data sesuai filter</td></tr>
+                <tr><td colSpan={11} className="py-12 text-center text-gray-400 text-[14px]">Tidak ada data sesuai filter</td></tr>
               )}
             </tbody>
           </table>

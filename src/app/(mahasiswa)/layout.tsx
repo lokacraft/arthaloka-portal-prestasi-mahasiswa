@@ -18,7 +18,7 @@ export default async function MahasiswaLayout({ children }: { children: React.Re
     <SidebarProvider>
       <AppSidebar role="mahasiswa" />
       <SidebarInset className="bg-gray-50 flex flex-col min-h-screen">
-        <Topbar userName={user.name} userId={user.nim} />
+        <Topbar userName={user.name} userEmail={user.email} userId={user.nim} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

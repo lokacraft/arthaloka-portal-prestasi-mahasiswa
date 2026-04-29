@@ -314,7 +314,6 @@ export default function WdDashboardPage() {
                      <SelectValue placeholder="Pilih Rentang" />
                    </SelectTrigger>
                    <SelectContent>
-                      <SelectItem value="3">3 Tahun Terakhir</SelectItem>
                       <SelectItem value="5">5 Tahun Terakhir</SelectItem>
                    </SelectContent>
                  </Select>

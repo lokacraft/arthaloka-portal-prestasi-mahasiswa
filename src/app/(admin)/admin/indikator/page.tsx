@@ -15,7 +15,7 @@ export default function IndikatorPage() {
   // STATE
   // ==========================================
   const [tahunSasaran, setTahunSasaran] = useState(currentYear.toString());
-  const [rentangMode, setRentangMode] = useState<'3'|'5'|'custom'>('3');
+  const [rentangMode, setRentangMode] = useState<'5'>('5');
   const [tahunMulaiCustom, setTahunMulaiCustom] = useState((currentYear - 2).toString());
   
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
@@ -75,11 +75,7 @@ export default function IndikatorPage() {
       setNmtsVal(nmtsDoc ? nmtsDoc.jumlahMahasiswa : null);
 
       // 2. Calculate Rentang
-      let rentangValue = 3;
-      if (rentangMode === '5') rentangValue = 5;
-      if (rentangMode === 'custom') {
-        rentangValue = ts - parseInt(tahunMulaiCustom) + 1;
-      }
+      const rentangValue = 5;
 
       // 3. Fetch Rekap Prestasi
       const res = await getRekapPrestasiAkreditasi(ts, rentangValue, kategoriFilter);
@@ -114,11 +110,7 @@ export default function IndikatorPage() {
     try {
       setLoadingAuto(true);
       const ts = parseInt(tahunSasaran);
-      let rentangValue = 3;
-      if (rentangMode === '5') rentangValue = 5;
-      if (rentangMode === 'custom') {
-        rentangValue = ts - parseInt(tahunMulaiCustom) + 1;
-      }
+      const rentangValue = 5;
 
       const data = await getDetailPrestasiExport(ts, rentangValue);
       
@@ -134,12 +126,16 @@ export default function IndikatorPage() {
       const exportData = filtered.map(d => ({
         "ID Prestasi": d.id,
         "Tahun": d.tahun,
-        "Nama Mahasiswa": d.mahasiswa.nim,
+        "Angkatan": d.angkatan || "N/A",
+        "Nama Mahasiswa": d.mahasiswa?.nim || "N/A",
         "Nama Kegiatan": d.namaPrestasi,
-        "Kategori": d.kategori.nama,
-        "Tingkat": d.tingkat.nama,
-        "Capaian": d.hasilCapaian,
-        "URL Sertifikat / Evidence": d.sertifikatUrl || "Tidak Ada",
+        "Jenis Lomba": d.jenisLomba || "N/A",
+        "Kategori": d.kategori?.nama || "N/A",
+        "Tingkat": d.tingkat?.nama || "N/A",
+        "Capaian": d.hasilCapaian || "N/A",
+        "Tanggal Mulai": d.tanggalMulai ? new Date(d.tanggalMulai).toLocaleDateString("id-ID") : "N/A",
+        "Tanggal Selesai": d.tanggalSelesai ? new Date(d.tanggalSelesai).toLocaleDateString("id-ID") : "N/A",
+        "URL Sertifikat / Evidence": (d.sertifikatUrls as string[] | null)?.join(", ") || "Tidak Ada",
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -236,28 +232,12 @@ export default function IndikatorPage() {
                   <SelectValue placeholder="Pilih Rentang" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="3">3 Tahun Terakhir</SelectItem>
                   <SelectItem value="5">5 Tahun Terakhir</SelectItem>
-                  <SelectItem value="custom">Rentang Kustom</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {rentangMode === 'custom' && (
-              <div className="space-y-2">
-                <label className="text-[14px] font-semibold text-[#1a1a1a]">Mulai Dari Tahun</label>
-                <Select value={tahunMulaiCustom} onValueChange={(val) => val && setTahunMulaiCustom(val)}>
-                  <SelectTrigger className="w-full bg-[#f8f9fa] text-gray-800 text-[15px] rounded-xl h-[46px] border-gray-200">
-                    <SelectValue placeholder="Pilih Tahun" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.filter(y => y < parseInt(tahunSasaran)).map(y => (
-                      <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
 
             <div className="space-y-2">
               <label className="text-[14px] font-semibold text-[#1a1a1a]">Kategori Prestasi</label>
