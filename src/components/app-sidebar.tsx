@@ -76,7 +76,7 @@ export function AppSidebar({ role, ...props }: React.ComponentProps<typeof Sideb
                       render={<Link href={item.url} />}
                       isActive={isActive}
                       tooltip={item.title}
-                      className={`h-11 px-4 text-base transition-colors ${
+                      className={`h-11 px-4 text-sm transition-colors ${
                         isActive 
                           ? "!bg-[#50C878] !text-white hover:!bg-[#43B569]" 
                           : "text-gray-700 hover:bg-emerald-50 hover:text-[#50C878]"
