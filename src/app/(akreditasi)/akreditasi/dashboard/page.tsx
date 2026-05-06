@@ -17,6 +17,7 @@ import {
   getTrendPrestasi,
   getRekapLengkap
 } from '@/server/akreditasi-actions';
+import { getProgramStudiList } from '@/server/prestasi-actions';
 
 const levelColor: Record<string, string> = {
   Internasional: 'bg-blue-50 text-blue-600 border border-blue-100',
@@ -41,9 +42,11 @@ export default function DashboardAkreditasiPage() {
   const [rentangMode, setRentangMode] = useState<'5'>('5');
   const [kategoriFilter, setKategoriFilter] = useState('Semua');
   const [levelFilter, setLevelFilter] = useState('Semua');
+  const [programStudiFilter, setProgramStudiFilter] = useState('Semua');
 
   // Master Data
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
+  const [programStudiList, setProgramStudiList] = useState<{id: string, nama: string}[]>([]);
   const [nmtsVal, setNmtsVal] = useState<number | null>(null);
   const [targets, setTargets] = useState<{ RI: number, RN: number, RW: number }>({ RI: 0.2, RN: 2.0, RW: 4.0 });
 
@@ -59,13 +62,14 @@ export default function DashboardAkreditasiPage() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [tahunSasaran, rentangMode, kategoriFilter, levelFilter]);
+  }, [tahunSasaran, rentangMode, kategoriFilter, levelFilter, programStudiFilter]);
 
   const fetchInitialData = async () => {
     try {
-      const [dbTargets, kats] = await Promise.all([
+      const [dbTargets, kats, prodi] = await Promise.all([
         getTargets(),
-        getKategoriPrestasi()
+        getKategoriPrestasi(),
+        getProgramStudiList()
       ]);
       
       const newT = { RI: 0.2, RN: 2.0, RW: 4.0 };
@@ -76,6 +80,7 @@ export default function DashboardAkreditasiPage() {
       });
       setTargets(newT);
       setKategoriList(kats);
+      setProgramStudiList(prodi);
     } catch (error) {
       toast.error("Gagal memuat data master");
     }
@@ -89,17 +94,37 @@ export default function DashboardAkreditasiPage() {
 
       const [nmtsDoc, rekap, trend, details] = await Promise.all([
         getNmTs(ts),
-        getRekapPrestasiAkreditasi(ts, rentang, kategoriFilter),
-        getTrendPrestasi(ts),
+        getRekapPrestasiAkreditasi(ts, rentang, kategoriFilter, programStudiFilter),
+        getTrendPrestasi(ts, rentang, programStudiFilter),
         getRekapLengkap({ 
-          tahun: levelFilter !== 'Semua' ? undefined : undefined, // we fetch all for the last 5 years based on TS
+          tahun: undefined, // we fetch all for the last 5 years based on TS
+          programStudiId: programStudiFilter
         })
       ]);
 
       // @ts-ignore
       setNmtsVal(nmtsDoc ? nmtsDoc.jumlahMahasiswa : null);
-      setRekapAuto(rekap);
-      setTrendData(trend);
+      
+      let filteredRekap = { ...rekap };
+      if (levelFilter !== 'Semua') {
+        const lf = levelFilter.toLowerCase();
+        if (lf !== 'internasional') filteredRekap.NI = 0;
+        if (lf !== 'nasional') filteredRekap.NN = 0;
+        if (lf !== 'wilayah') filteredRekap.NW = 0;
+      }
+      setRekapAuto(filteredRekap);
+
+      let filteredTrend = trend.map((t: any) => {
+        let nt = { ...t };
+        if (levelFilter !== 'Semua') {
+          const lf = levelFilter.toLowerCase();
+          if (lf !== 'internasional') nt.int = 0;
+          if (lf !== 'nasional') nt.nas = 0;
+          if (lf !== 'wilayah') nt.wil = 0;
+        }
+        return nt;
+      });
+      setTrendData(filteredTrend);
       
       // Filter detailed data based on TS and Rentang (which is 5 years for the table as requested "Rekap Data 5 Tahun Terakhir")
       const startYearTable = ts - 4;
@@ -133,7 +158,10 @@ export default function DashboardAkreditasiPage() {
           tahun: y,
           kategori: 'Akademik',
           int: akad.filter(d => d.tingkat?.nama.toLowerCase().includes('internasional')).length,
-          nas: akad.filter(d => d.tingkat?.nama.toLowerCase().includes('nasional')).length,
+          nas: akad.filter(d => {
+            const tk = d.tingkat?.nama.toLowerCase() || '';
+            return tk.includes('nasional') && !tk.includes('internasional');
+          }).length,
           wil: akad.filter(d => d.tingkat?.nama.toLowerCase().includes('wilayah') || d.tingkat?.nama.toLowerCase().includes('lokal')).length,
           total: akad.length
         });
@@ -147,7 +175,10 @@ export default function DashboardAkreditasiPage() {
           tahun: y,
           kategori: 'Non-Akademik',
           int: nonAkad.filter(d => d.tingkat?.nama.toLowerCase().includes('internasional')).length,
-          nas: nonAkad.filter(d => d.tingkat?.nama.toLowerCase().includes('nasional')).length,
+          nas: nonAkad.filter(d => {
+            const tk = d.tingkat?.nama.toLowerCase() || '';
+            return tk.includes('nasional') && !tk.includes('internasional');
+          }).length,
           wil: nonAkad.filter(d => d.tingkat?.nama.toLowerCase().includes('wilayah') || d.tingkat?.nama.toLowerCase().includes('lokal')).length,
           total: nonAkad.length
         });
@@ -281,13 +312,34 @@ export default function DashboardAkreditasiPage() {
             <label className="text-[12px] font-medium text-gray-400">Level</label>
             <Select value={levelFilter} onValueChange={onSelectChange(setLevelFilter)}>
               <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Level" />
+                <SelectValue placeholder="Semua Level">
+                  {levelFilter === 'Semua' ? 'Semua Level' : levelFilter.charAt(0).toUpperCase() + levelFilter.slice(1)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Semua">Semua Level</SelectItem>
                 <SelectItem value="internasional">Internasional</SelectItem>
                 <SelectItem value="nasional">Nasional</SelectItem>
                 <SelectItem value="wilayah">Wilayah</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1 flex flex-col">
+            <label className="text-[12px] font-medium text-gray-400">Program Studi</label>
+            <Select value={programStudiFilter} onValueChange={onSelectChange(setProgramStudiFilter)}>
+              <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
+                <SelectValue placeholder="Semua Program Studi">
+                  {programStudiFilter && programStudiFilter !== 'Semua' 
+                    ? programStudiList.find((p: any) => p.id === programStudiFilter)?.nama 
+                    : "Semua Program Studi"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua">Semua Program Studi</SelectItem>
+                {programStudiList.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

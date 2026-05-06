@@ -27,23 +27,50 @@ import { id as localeId } from "date-fns/locale";
 
 interface KategoriItem { id: string; nama: string; }
 interface TingkatItem { id: string; nama: string; }
+interface ProgramStudiItem { id: string; nama: string; }
 interface TeamMember { nim: string; nama: string; angkatan: string; }
 interface Wilayah { code: string; name: string; }
 
 const HASIL_OPTIONS = ["Juara 1", "Juara 2", "Juara 3", "Lainnya"];
+
+/**
+ * Menentukan semester berdasarkan pola Tel-U:
+ * GENAP: Februari–Juni (bulan 2–6)
+ * GANJIL: September–Januari (bulan 9–1)
+ * Ambigu (Jul–Agu): GANJIL (lebih dekat ke September)
+ */
+function detectSemester(mulai?: Date, selesai?: Date): "GANJIL" | "GENAP" {
+  if (!mulai && !selesai) return "GANJIL";
+  const ref = mulai || selesai!;
+  const startM = mulai ? mulai.getMonth() + 1 : ref.getMonth() + 1;
+  const endM   = selesai ? selesai.getMonth() + 1 : startM;
+
+  const isGenap  = (m: number) => m >= 2 && m <= 6;
+  const isGanjil = (m: number) => m >= 9 || m === 1;
+
+  const genapScore  = (isGenap(startM) ? 1 : 0) + (isGenap(endM) ? 1 : 0);
+  const ganjilScore = (isGanjil(startM) ? 1 : 0) + (isGanjil(endM) ? 1 : 0);
+
+  if (genapScore > ganjilScore) return "GENAP";
+  if (ganjilScore > genapScore) return "GANJIL";
+  // ambigu: pakai endMonth
+  return endM <= 6 ? "GENAP" : "GANJIL";
+}
 
 interface Props {
   mahasiswaId: string;
   nim: string;
   kategoriList: KategoriItem[];
   tingkatList: TingkatItem[];
+  programStudiList: ProgramStudiItem[];
 }
 
-export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList }: Props) {
+export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList, programStudiList }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Form state
+  const [programStudiId, setProgramStudiId] = useState<string>(programStudiList[0]?.id ?? "");
   const [tahun, setTahun] = useState<number>(new Date().getFullYear());
   const [showYearPicker, setShowYearPicker] = useState(false);
   const yearOptions = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
@@ -52,6 +79,7 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
   const [showAngkatanPicker, setShowAngkatanPicker] = useState(false);
   const angkatanOptions = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i);
 
+  // Semester dideteksi otomatis — read-only
   const [semester, setSemester] = useState<"GANJIL" | "GENAP">("GANJIL");
   const [kategoriId, setKategoriId] = useState<string>(kategoriList[0]?.id ?? "");
   const [jenisLomba, setJenisLomba] = useState<"BELMAWA" | "MANDIRI">("MANDIRI");
@@ -78,6 +106,11 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
 
   // Confirmation Dialog
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Auto-detect semester saat tanggal mulai/selesai berubah
+  useEffect(() => {
+    setSemester(detectSemester(tanggalMulai, tanggalSelesai));
+  }, [tanggalMulai, tanggalSelesai]);
 
   // Internasional check
   const isInternasional = tingkatList.find(t => t.id === tingkatId)?.nama.toLowerCase().includes("internasional");
@@ -123,11 +156,17 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
     if (!e.target.files) return;
     const incoming = Array.from(e.target.files);
     
-    // Validate types
-    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
+    // Validasi tipe: hanya PDF, Word, dan gambar
+    const validTypes = [
+      "application/pdf", 
+      "image/jpeg", 
+      "image/png", 
+      "application/msword", 
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ];
     const hasInvalid = incoming.some((f) => !validTypes.includes(f.type));
     if (hasInvalid) {
-      toast.error("Hanya file PDF, JPG, atau PNG yang diperbolehkan.");
+      toast.error("Hanya file PDF, Word, JPG, atau PNG yang diperbolehkan.");
       return;
     }
 
@@ -203,6 +242,7 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
 
       const result = await createPrestasi({
         mahasiswaId,
+        programStudiId: programStudiId || undefined,
         kategoriId,
         tingkatId,
         angkatan,
@@ -243,6 +283,23 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-7">
+
+          {/* Row -1: Program Studi */}
+          <div className="space-y-2">
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">Program Studi <span className="text-red-500">*</span></label>
+            <Select value={programStudiId} onValueChange={(v) => v && setProgramStudiId(v)}>
+              <SelectTrigger className="w-full bg-[#f8f9fa] text-[15px] rounded-xl h-[48px] border-gray-200 focus:ring-[#50c878]/50">
+                <SelectValue placeholder="Pilih Program Studi">
+                  {programStudiId ? programStudiList.find((p) => p.id === programStudiId)?.nama : "Pilih Program Studi"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {programStudiList.map((p) => (
+                  <SelectItem key={p.id} value={p.id} label={p.nama}>{p.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Row 0: NIM & Angkatan */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -306,14 +363,20 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
             </div>
             <div className="space-y-2">
               <label className="text-[14px] font-semibold text-[#1a1a1a]">Semester</label>
-              <RadioGroup value={semester} onValueChange={(v) => v && setSemester(v as "GANJIL" | "GENAP")} className="flex gap-6 pt-1">
-                {(["GANJIL", "GENAP"] as const).map((s) => (
-                  <div key={s} className="flex items-center space-x-2">
-                    <RadioGroupItem value={s} id={`sem-${s}`} className="data-[state=checked]:border-[#50c878] data-[state=checked]:bg-[#50c878]" />
-                    <label htmlFor={`sem-${s}`} className="text-[15px] text-gray-700 cursor-pointer">{s.charAt(0) + s.slice(1).toLowerCase()}</label>
-                  </div>
-                ))}
-              </RadioGroup>
+              <div className="pt-1 space-y-2">
+                <RadioGroup value={semester} className="flex gap-6 pointer-events-none opacity-70">
+                  {(["GANJIL", "GENAP"] as const).map((s) => (
+                    <div key={s} className="flex items-center space-x-2">
+                      <RadioGroupItem value={s} id={`sem-${s}`} className="data-[state=checked]:border-[#50c878] data-[state=checked]:bg-[#50c878]" />
+                      <label htmlFor={`sem-${s}`} className="text-[15px] text-gray-700">{s.charAt(0) + s.slice(1).toLowerCase()}</label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                <p className="text-[12px] text-[#50c878] font-medium flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+                  Auto-detected dari tanggal pelaksanaan (Pola Semester Tel-U)
+                </p>
+              </div>
             </div>
           </div>
 
@@ -429,6 +492,14 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
                     mode="single"
                     selected={tanggalSelesai}
                     onSelect={(d) => { setTanggalSelesai(d); setShowTanggalSelesaiPicker(false); }}
+                    disabled={(date) => {
+                      if (!tanggalMulai) return false;
+                      const d = new Date(date);
+                      d.setHours(0, 0, 0, 0);
+                      const tm = new Date(tanggalMulai);
+                      tm.setHours(0, 0, 0, 0);
+                      return d < tm;
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -444,7 +515,9 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
                 <label className="text-[13px] text-gray-500 font-medium">Provinsi</label>
                 <Select value={provinsiCode} onValueChange={(v) => { if(v) { setProvinsiCode(v); setKotaCode(""); } }} disabled={isInternasional}>
                   <SelectTrigger className="w-full bg-[#f8f9fa] text-[15px] rounded-xl h-[48px] border-gray-200 focus:ring-[#50c878]/50 disabled:opacity-50">
-                    <SelectValue placeholder={isInternasional ? "N/A (Internasional)" : "Pilih Provinsi"} />
+                    <SelectValue placeholder={isInternasional ? "N/A (Internasional)" : "Pilih Provinsi"}>
+                      {provinsiCode && !isInternasional ? provinsiList.find((p) => p.code === provinsiCode)?.name : (isInternasional ? "N/A (Internasional)" : "Pilih Provinsi")}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {provinsiList.map((p) => <SelectItem key={p.code} value={p.code} label={p.name}>{p.name}</SelectItem>)}
@@ -455,7 +528,9 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
                 <label className="text-[13px] text-gray-500 font-medium">Kota / Kabupaten</label>
                 <Select value={kotaCode} onValueChange={(v) => v && setKotaCode(v)} disabled={!provinsiCode || isInternasional}>
                   <SelectTrigger className="w-full bg-[#f8f9fa] text-[15px] rounded-xl h-[48px] border-gray-200 focus:ring-[#50c878]/50 disabled:opacity-50">
-                    <SelectValue placeholder={isInternasional ? "N/A" : provinsiCode ? "Pilih Kota" : "Pilih provinsi dulu"} />
+                    <SelectValue placeholder={isInternasional ? "N/A" : provinsiCode ? "Pilih Kota" : "Pilih provinsi dulu"}>
+                      {kotaCode && !isInternasional ? kotaList.find((k) => k.code === kotaCode)?.name : (isInternasional ? "N/A" : (provinsiCode ? "Pilih Kota" : "Pilih provinsi dulu"))}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
                     {kotaList.map((k) => <SelectItem key={k.code} value={k.code} label={k.name}>{k.name}</SelectItem>)}
@@ -540,13 +615,22 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList 
 
           {/* Bukti Pendukung */}
           <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung (Maks. 10 file)</label>
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung (Maks. 10 file, PDF/Word/JPG/PNG)</label>
             <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${buktiBukti.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 10} />
+              <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 10} />
               <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
               <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih</span>
-              <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/10 file dipilih</span>
+              <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/10 file dipilih (PDF/Word/JPG/PNG)</span>
             </label>
+            {/* Template Download */}
+            <a
+              href="/assets/Template-Bukti-Pendukung.docx"
+              download="Template-Bukti-Pendukung.docx"
+              className="inline-flex items-center gap-2 mt-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#006400] hover:bg-emerald-100 transition-colors text-[13px] font-semibold"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              Download Template Bukti Pendukung (.docx)
+            </a>
             {buktiBukti.length > 0 && (
               <div className="mt-3 space-y-2">
                 {buktiBukti.map((f, idx) => (

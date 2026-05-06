@@ -33,7 +33,7 @@ export function Topbar({ userName: defaultName = "Ahmad Rizki", userEmail: defau
 
   // Determine basePath dynamically based on role prefix (e.g., /admin, /akreditasi). 
   // If no known prefix, default to "" (mahasiswa role)
-  const rolePrefixes = ["/admin", "/akreditasi", "/wd1"];
+  const rolePrefixes = ["/admin", "/akreditasi", "/wd1", "/kaprodi"];
   const basePath = rolePrefixes.find(prefix => pathname.startsWith(prefix)) || "";
 
   const handleLogout = async () => {
@@ -174,15 +174,13 @@ export function Topbar({ userName: defaultName = "Ahmad Rizki", userEmail: defau
             </div>
             
             <DropdownMenuItem
-              // @ts-expect-error asChild is valid for Slot
-              asChild
-              className="cursor-pointer py-2.5 px-3 rounded-lg hover:bg-gray-50 transition-colors group/item outline-none flex items-center"
-            >
-              <Link href={`${basePath}/pengaturan`}>
-                <Settings className="h-[18px] w-[18px] mr-2.5 text-gray-500" />
-                <span className="font-medium text-[14px] text-gray-700">Pengaturan Akun</span>
-              </Link>
-            </DropdownMenuItem>
+              render={
+                <Link href={`${basePath}/pengaturan`} className="cursor-pointer py-2.5 px-3 rounded-lg hover:bg-gray-50 transition-colors group/item outline-none flex items-center">
+                  <Settings className="h-[18px] w-[18px] mr-2.5 text-gray-500" />
+                  <span className="font-medium text-[14px] text-gray-700">Pengaturan Akun</span>
+                </Link>
+              }
+            />
             
             <DropdownMenuSeparator className="my-1.5 bg-gray-100" />
             

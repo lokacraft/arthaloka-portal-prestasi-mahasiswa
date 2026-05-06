@@ -15,6 +15,7 @@ export default async function DetailVerifikasiPage({ params }: { params: Promise
           user: true
         }
       },
+      programStudi: true,
       kategori: true,
       tingkat: true,
       validator: true,

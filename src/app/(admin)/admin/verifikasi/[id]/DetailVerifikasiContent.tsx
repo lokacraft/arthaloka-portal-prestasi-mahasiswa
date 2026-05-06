@@ -146,9 +146,10 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
 
       <div className="bg-gray-50/50 p-6 md:p-8 rounded-2xl border border-gray-100">
         <h2 className="text-[16px] font-bold text-gray-900 mb-6">Informasi Mahasiswa</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div><span className="text-[13px] text-gray-500 font-medium block">NIM</span><span className="text-[15px] font-semibold text-gray-900 mt-1 block">{prestasi.mahasiswa.nim}</span></div>
           <div><span className="text-[13px] text-gray-500 font-medium block">Nama Lengkap</span><span className="text-[15px] font-semibold text-gray-900 mt-1 block">{prestasi.mahasiswa.user.name}</span></div>
+          <div><span className="text-[13px] text-gray-500 font-medium block">Program Studi</span><span className="text-[15px] font-semibold text-gray-900 mt-1 block">{prestasi.programStudi?.nama || '-'}</span></div>
           <div><span className="text-[13px] text-gray-500 font-medium block">Email</span><span className="text-[15px] font-semibold text-gray-900 mt-1 block">{prestasi.mahasiswa.user.email}</span></div>
         </div>
       </div>

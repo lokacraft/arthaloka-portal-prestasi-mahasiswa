@@ -16,6 +16,7 @@ export interface PrestasiStats {
 
 export interface CreatePrestasiInput {
   mahasiswaId: string;
+  programStudiId?: string;
   kategoriId: string;
   tingkatId: string;
   tahun: number;
@@ -40,6 +41,13 @@ export interface CreatePrestasiInput {
 // =====================================================================
 // READ ACTIONS
 // =====================================================================
+
+/**
+ * Get all program studi list for form select.
+ */
+export async function getProgramStudiList() {
+  return prisma.programStudi.findMany({ orderBy: { nama: "asc" } });
+}
 
 /**
  * Get stats (pending, approved, rejected) for a mahasiswa.
@@ -72,6 +80,7 @@ export async function getRecentPrestasi(
       include: {
         kategori: { select: { nama: true } },
         tingkat: { select: { nama: true } },
+        programStudi: { select: { nama: true } },
       },
     }),
     prisma.prestasi.count({ where: { mahasiswaId } }),
@@ -112,6 +121,7 @@ export async function getAllPrestasiByMahasiswa(
       include: {
         kategori: { select: { nama: true } },
         tingkat: { select: { nama: true } },
+        programStudi: { select: { nama: true } },
       },
     }),
     prisma.prestasi.count({ where }),
@@ -129,6 +139,7 @@ export async function getPrestasiById(id: string) {
     include: {
       kategori: true,
       tingkat: true,
+      programStudi: true,
       mahasiswa: {
         include: { user: { select: { name: true, email: true } } },
       },
@@ -176,6 +187,7 @@ export async function createPrestasi(input: CreatePrestasiInput) {
     const prestasi = await prisma.prestasi.create({
       data: {
         mahasiswaId: input.mahasiswaId,
+        programStudiId: input.programStudiId ?? null,
         kategoriId: input.kategoriId,
         tingkatId: input.tingkatId,
         angkatan: input.angkatan,

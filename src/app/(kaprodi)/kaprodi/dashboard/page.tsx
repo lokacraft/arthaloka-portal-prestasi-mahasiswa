@@ -5,8 +5,7 @@ import { TrendingUp, Award, ExternalLink, Filter, Users, Target, CheckCircle2, L
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getRekapLengkap, getTrendPrestasi, getNmTs, getTargets } from '@/server/akreditasi-actions';
-import { getProgramStudiList } from '@/server/prestasi-actions';
+import { getRekapLengkap, getTrendPrestasi, getNmTs, getTargets, getProgramStudiByNama } from '@/server/akreditasi-actions';
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, BarChart as RechartsBarChart, Bar } from 'recharts';
@@ -15,18 +14,16 @@ function onSelectChange(setter: React.Dispatch<React.SetStateAction<any>>) {
   return (value: string | null) => { if (value !== null) setter(value); };
 }
 
-export default function WdDashboardPage() {
+export default function KaprodiDashboardPage() {
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 5 + i).reverse();
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [tahunSasaran, setTahunSasaran] = useState(currentYear.toString());
   const [rentangMode, setRentangMode] = useState('5');
-  const [programStudiFilter, setProgramStudiFilter] = useState('Semua');
 
   // Data states
   const [loading, setLoading] = useState(true);
-  const [programStudiList, setProgramStudiList] = useState<{id: string, nama: string}[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [nmtsVal, setNmtsVal] = useState<number | null>(null);
   const [targets, setTargets] = useState({ RI: 0.05, RN: 0.5, RW: 1.5 });
@@ -39,21 +36,8 @@ export default function WdDashboardPage() {
   const [rekapAuto, setRekapAuto] = useState({ NI: 0, NN: 0, NW: 0 });
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
     fetchData();
-  }, [tahunSasaran, rentangMode, programStudiFilter]);
-
-  const fetchInitialData = async () => {
-    try {
-      const prodi = await getProgramStudiList();
-      setProgramStudiList(prodi);
-    } catch (error) {
-      toast.error("Gagal memuat data program studi");
-    }
-  };
+  }, [tahunSasaran, rentangMode]);
 
   const fetchData = async () => {
     try {
@@ -61,11 +45,15 @@ export default function WdDashboardPage() {
       const ts = parseInt(tahunSasaran);
       const rm = parseInt(rentangMode);
 
+      // Dapatkan ID untuk Teknik Industri
+      const prodi = await getProgramStudiByNama("Teknik Industri");
+      const programStudiId = prodi ? prodi.id : "Semua";
+
       const [trend, nmts, targetData, details] = await Promise.all([
-        getTrendPrestasi(ts, rm, programStudiFilter),
+        getTrendPrestasi(ts, rm, programStudiId),
         getNmTs(ts),
         getTargets(),
-        getRekapLengkap({ startYear: ts - rm + 1, endYear: ts, programStudiId: programStudiFilter })
+        getRekapLengkap({ startYear: ts - rm + 1, endYear: ts, programStudiId })
       ]);
 
       setTrendData(trend);
@@ -79,7 +67,7 @@ export default function WdDashboardPage() {
       }
 
       setTotalPrestasi(details.length);
-      const uniqueNims = new Set(details.map(d => d.mahasiswa?.nim).filter(Boolean));
+      const uniqueNims = new Set(details.map((d: any) => d.mahasiswa?.nim).filter(Boolean));
       setUniqueMahasiswa(uniqueNims.size);
 
       // Dist Kategori
@@ -88,7 +76,7 @@ export default function WdDashboardPage() {
       
       let NI = 0; let NN = 0; let NW = 0;
 
-      details.forEach(d => {
+      details.forEach((d: any) => {
         const nama = d.kategori?.nama.toLowerCase() || '';
         const tk = d.tingkat?.nama.toLowerCase() || '';
         
@@ -168,14 +156,14 @@ export default function WdDashboardPage() {
       
       {/* Header */}
       <div>
-        <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight">Executive Dashboard</h1>
-        <p className="text-gray-500 text-[15px] mt-1">Ringkasan prestasi mahasiswa tingkat pimpinan fakultas</p>
+        <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight">Dashboard Kaprodi</h1>
+        <p className="text-gray-500 text-[15px] mt-1">Ringkasan prestasi mahasiswa Program Studi Teknik Industri</p>
       </div>
 
       {/* Hero Card */}
       <div className="bg-[#50c878] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden shadow-lg shadow-[#50c878]/20">
         <div className="relative z-10 text-white">
-          <p className="text-white/80 font-medium text-[14px]">Total Prestasi Mahasiswa</p>
+          <p className="text-white/80 font-medium text-[14px]">Total Prestasi Mahasiswa (Teknik Industri)</p>
           <div className="flex items-end gap-3 mt-1">
             <h2 className="text-4xl font-bold tracking-tight">{totalPrestasi} Prestasi</h2>
           </div>
@@ -335,24 +323,6 @@ export default function WdDashboardPage() {
                    </SelectTrigger>
                    <SelectContent>
                       <SelectItem value="5">5 Tahun Terakhir</SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
-               <div className="space-y-1.5 flex flex-col">
-                 <label className="text-[14px] font-medium text-gray-900">Program Studi</label>
-                 <Select value={programStudiFilter} onValueChange={onSelectChange(setProgramStudiFilter)}>
-                   <SelectTrigger className="bg-white rounded-lg h-11 border-gray-200 text-[14px] w-full focus:ring-2 focus:ring-[#50c878]/20 focus:border-[#50c878]">
-                     <SelectValue placeholder="Semua Program Studi">
-                       {programStudiFilter && programStudiFilter !== 'Semua' 
-                         ? programStudiList.find((p: any) => p.id === programStudiFilter)?.nama 
-                         : "Semua Program Studi"}
-                     </SelectValue>
-                   </SelectTrigger>
-                   <SelectContent>
-                      <SelectItem value="Semua">Semua Program Studi</SelectItem>
-                      {programStudiList.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
-                      ))}
                    </SelectContent>
                  </Select>
                </div>

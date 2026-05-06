@@ -36,5 +36,8 @@ export const navigationConfig: Record<string, NavItem[]> = {
   ],
   wd1: [
     { title: "Dashboard Executive", url: "/wd1/dashboard", icon: Home },
+  ],
+  kaprodi: [
+    { title: "Dashboard Executive", url: "/kaprodi/dashboard", icon: Home },
   ]
 };

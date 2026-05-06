@@ -167,8 +167,9 @@ enum JenisKelamin {
 
 model ProgramStudi {
   id          String      @id @default(cuid())
-  nama        String      @unique // Contoh: "S1 Teknik Informatika", "S1 Sistem Informasi"
+  nama        String      @unique // Contoh: "Teknik Logistik", "Teknik Industri", "Manajemen Rekayasa Industri"
   mahasiswa   Mahasiswa[]
+  prestasi    Prestasi[]  // relasi ke tabel prestasi
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -211,6 +212,10 @@ model Prestasi {
   // Relasi Mahasiswa
   mahasiswaId        String
   mahasiswa          Mahasiswa        @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+
+  // Relasi Program Studi (ditambahkan untuk filter per prodi)
+  programStudiId     String?
+  programStudi       ProgramStudi?    @relation(fields: [programStudiId], references: [id])
   
   // Relasi Kategori & Tingkat
   kategoriId         String

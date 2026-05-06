@@ -86,7 +86,7 @@ export async function updateTarget(kodeTarget: string, nilaiPersen: number) {
 // REKAP & PERHITUNGAN PRESTASI
 // ============================================================================
 
-export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTahun: number, kategoriFilter?: string) {
+export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTahun: number, kategoriFilter?: string, programStudiId?: string) {
   try {
     const startYear = tahunSasaran - rentangTahun + 1;
     const endYear = tahunSasaran;
@@ -99,6 +99,11 @@ export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTa
         lte: endYear,
       },
     };
+
+    // Filter program studi (untuk kaprodi)
+    if (programStudiId && programStudiId !== 'Semua') {
+      query.programStudiId = programStudiId;
+    }
 
     // Filter berdasarkan kategori menggunakan kategoriId relasi
     if (kategoriFilter && kategoriFilter !== 'Semua') {
@@ -152,19 +157,26 @@ export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTa
 // DATA UNTUK GRAFIK & REKAP (HALAMAN AKREDITASI)
 // ============================================================================
 
-export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: number = 5) {
+export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: number = 5, programStudiId?: string) {
   try {
     const startYear = tahunSasaran - rentangTahun + 1;
     
     // Ambil data
-    const prestasiList = await prisma.prestasi.findMany({
-      where: {
-        statusValidasi: 'APPROVED',
-        tahun: {
-          gte: startYear,
-          lte: tahunSasaran,
-        },
+    const whereClause: any = {
+      statusValidasi: 'APPROVED',
+      tahun: {
+        gte: startYear,
+        lte: tahunSasaran,
       },
+    };
+
+    // Filter program studi (untuk kaprodi)
+    if (programStudiId && programStudiId !== 'Semua') {
+      whereClause.programStudiId = programStudiId;
+    }
+
+    const prestasiList = await prisma.prestasi.findMany({
+      where: whereClause,
       include: {
         tingkat: true,
       },
@@ -208,14 +220,16 @@ export async function getRekapLengkap({
   endYear,
   kategoriId, 
   levelId, 
-  angkatan 
+  angkatan,
+  programStudiId,
 }: { 
   tahun?: number, 
   startYear?: number,
   endYear?: number,
   kategoriId?: string, 
   levelId?: string, 
-  angkatan?: number 
+  angkatan?: number,
+  programStudiId?: string,
 }) {
   try {
     const query: any = { statusValidasi: 'APPROVED' };
@@ -226,6 +240,11 @@ export async function getRekapLengkap({
       query.tahun = tahun;
     }
     if (levelId && levelId !== 'Semua') query.tingkatId = levelId;
+
+    // Filter Program Studi (untuk kaprodi)
+    if (programStudiId && programStudiId !== 'Semua') {
+      query.programStudiId = programStudiId;
+    }
     
     // Filter Kategori
     if (kategoriId && kategoriId !== 'Semua') {
@@ -250,6 +269,7 @@ export async function getRekapLengkap({
         mahasiswa: true,
         kategori: true,
         tingkat: true,
+        programStudi: true,
       },
       orderBy: { tahun: 'desc' }
     });
@@ -299,5 +319,16 @@ export async function getKategoriPrestasi() {
   } catch (error) {
     console.error("Error fetching kategori:", error);
     throw new Error("Gagal mengambil data kategori");
+  }
+}
+
+export async function getProgramStudiByNama(nama: string) {
+  try {
+    return await prisma.programStudi.findUnique({
+      where: { nama }
+    });
+  } catch (error) {
+    console.error("Error fetching program studi by nama:", error);
+    return null;
   }
 }

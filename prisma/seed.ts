@@ -1,4 +1,13 @@
-import prisma from '../src/lib/prisma';
+// Seed script — direct instantiation without path alias issues
+import "dotenv/config";
+import { PrismaClient } from '../src/generated/prisma/client.js';
+import { PrismaPg } from '@prisma/adapter-pg';
+
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Memulai eksekusi seeder database...');
@@ -11,11 +20,11 @@ async function main() {
     { name: 'ADMIN', description: 'Administrator sistem portal prestasi' },
     { name: 'AKREDITASI', description: 'Tim akreditasi untuk rekap dan pelaporan' },
     { name: 'WD', description: 'Wakil Dekan bidang kemahasiswaan' },
+    { name: 'KAPRODI', description: 'Kepala Program Studi Teknik Industri' },
   ];
 
-  console.log('\n[1/4] Menambahkan data Role...');
+  console.log('\n[1/5] Menambahkan data Role...');
   for (const role of roles) {
-    // Menggunakan upsert agar script aman dijalankan berulang kali (idempotent)
     await prisma.role.upsert({
       where: { name: role.name },
       update: { description: role.description },
@@ -25,16 +34,15 @@ async function main() {
   }
 
   // =========================================================
-  // 2. Seeder untuk Tabel PROGRAM STUDI (Contoh Master Data)
+  // 2. Seeder untuk Tabel PROGRAM STUDI
   // =========================================================
   const programStudiList = [
-    { nama: 'S1 Teknik Informatika' },
-    { nama: 'S1 Sistem Informasi' },
-    { nama: 'S1 Sains Data' },
-    { nama: 'D3 Manajemen Informatika' },
+    { nama: 'Teknik Logistik' },
+    { nama: 'Teknik Industri' },
+    { nama: 'Manajemen Rekayasa Industri' },
   ];
 
-  console.log('\n[2/4] Menambahkan data Program Studi...');
+  console.log('\n[2/5] Menambahkan data Program Studi...');
   for (const prodi of programStudiList) {
     await prisma.programStudi.upsert({
       where: { nama: prodi.nama },
@@ -51,10 +59,10 @@ async function main() {
     { nama: 'Akademik', keterangan: 'Olimpiade, Karya Tulis Ilmiah, Lomba Cerdas Cermat, dll.' },
     { nama: 'Seni', keterangan: 'Tari, Paduan Suara, Melukis, Fotografi, dll.' },
     { nama: 'Olahraga', keterangan: 'Futsal, Basket, E-Sports, Atletik, dll.' },
-    { nama: 'Keagamaan', keterangan: 'MTQ, Hafiz Qur\'an, dll.' },
+    { nama: 'Keagamaan', keterangan: "MTQ, Hafiz Qur'an, dll." },
   ];
 
-  console.log('\n[3/4] Menambahkan data Kategori Prestasi...');
+  console.log('\n[3/5] Menambahkan data Kategori Prestasi...');
   for (const kategori of kategoriList) {
     await prisma.kategoriPrestasi.upsert({
       where: { nama: kategori.nama },
@@ -75,7 +83,7 @@ async function main() {
     { nama: 'Internasional', bobotPoin: 50 },
   ];
 
-  console.log('\n[4/4] Menambahkan data Tingkat Prestasi...');
+  console.log('\n[4/5] Menambahkan data Tingkat Prestasi...');
   for (const tingkat of tingkatList) {
     await prisma.tingkatPrestasi.upsert({
       where: { nama: tingkat.nama },
@@ -83,6 +91,25 @@ async function main() {
       create: tingkat,
     });
     console.log(`  ✔️ Tingkat: ${tingkat.nama} (Poin: ${tingkat.bobotPoin})`);
+  }
+
+  // =========================================================
+  // 5. Seeder untuk TARGET AKREDITASI (default)
+  // =========================================================
+  const targetList = [
+    { kodeTarget: 'RI', nama: 'Target Rasio Internasional', nilaiPersen: 0.2 },
+    { kodeTarget: 'RN', nama: 'Target Rasio Nasional', nilaiPersen: 2.0 },
+    { kodeTarget: 'RW', nama: 'Target Rasio Wilayah/Lokal', nilaiPersen: 4.0 },
+  ];
+
+  console.log('\n[5/5] Menambahkan data Target Akreditasi...');
+  for (const target of targetList) {
+    await prisma.targetAkreditasi.upsert({
+      where: { kodeTarget: target.kodeTarget },
+      update: { nilaiPersen: target.nilaiPersen },
+      create: target,
+    });
+    console.log(`  ✔️ Target: ${target.kodeTarget} = ${target.nilaiPersen}%`);
   }
 
   console.log('\n🎉 Seeder berhasil dieksekusi dengan sukses!');

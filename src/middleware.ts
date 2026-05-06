@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
         case 'ADMIN': return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         case 'AKREDITASI': return NextResponse.redirect(new URL('/akreditasi/dashboard', request.url));
         case 'WD': return NextResponse.redirect(new URL('/wd1/dashboard', request.url));
+        case 'KAPRODI': return NextResponse.redirect(new URL('/kaprodi/dashboard', request.url));
         case 'MAHASISWA': return NextResponse.redirect(new URL('/dashboard', request.url));
         default: return NextResponse.redirect(new URL('/dashboard', request.url));
       }
@@ -25,6 +26,9 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith('/wd1') && roleCookie !== 'WD' && roleCookie !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
+    if (pathname.startsWith('/kaprodi') && roleCookie !== 'KAPRODI' && roleCookie !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
     if (pathname.startsWith('/akreditasi') && roleCookie !== 'AKREDITASI' && roleCookie !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
@@ -34,6 +38,7 @@ export function middleware(request: NextRequest) {
         case 'ADMIN': return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         case 'AKREDITASI': return NextResponse.redirect(new URL('/akreditasi/dashboard', request.url));
         case 'WD': return NextResponse.redirect(new URL('/wd1/dashboard', request.url));
+        case 'KAPRODI': return NextResponse.redirect(new URL('/kaprodi/dashboard', request.url));
       }
     }
   }

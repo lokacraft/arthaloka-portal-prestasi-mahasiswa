@@ -155,6 +155,7 @@ export async function setLoginCookieAndGetRedirectUrl(email: string) {
 
   const hasAdmin = user.userRoles.some(ur => ur.role.name.toUpperCase() === "ADMIN");
   const hasWD = user.userRoles.some(ur => ur.role.name.toUpperCase() === "WD");
+  const hasKaprodi = user.userRoles.some(ur => ur.role.name.toUpperCase() === "KAPRODI");
   const hasAkreditasi = user.userRoles.some(ur => ur.role.name.toUpperCase() === "AKREDITASI");
 
   if (hasAdmin) {
@@ -163,6 +164,9 @@ export async function setLoginCookieAndGetRedirectUrl(email: string) {
   } else if (hasWD) {
     mainRole = "WD";
     redirectUrl = "/wd1/dashboard";
+  } else if (hasKaprodi) {
+    mainRole = "KAPRODI";
+    redirectUrl = "/kaprodi/dashboard";
   } else if (hasAkreditasi) {
     mainRole = "AKREDITASI";
     redirectUrl = "/akreditasi/dashboard";
