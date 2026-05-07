@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { getRekapLengkap, getKategoriPrestasi } from '@/server/akreditasi-actions';
+import { getProgramStudiList } from '@/server/prestasi-actions';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -31,12 +32,14 @@ export default function RekapPage() {
   const [kategori, setKategori] = useState('Semua');
   const [level, setLevel] = useState('Semua');
   const [angkatan, setAngkatan] = useState('Semua');
+  const [programStudi, setProgramStudi] = useState('Semua');
 
   // Data
   const [loading, setLoading] = useState(true);
   const [allData, setAllData] = useState<any[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
+  const [programStudiList, setProgramStudiList] = useState<{id: string, nama: string}[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -44,17 +47,24 @@ export default function RekapPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [tahun, kategori, level, angkatan, allData]);
+  }, [tahun, kategori, level, angkatan, programStudi, allData]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [data, kats] = await Promise.all([
+      const [data, kats, prodi] = await Promise.all([
         getRekapLengkap({}),
-        getKategoriPrestasi()
+        getKategoriPrestasi(),
+        getProgramStudiList()
       ]);
       setAllData(data);
       setKategoriList(kats);
+      setProgramStudiList(prodi);
+      
+      const ti = prodi.find((p: any) => p.nama.toLowerCase().includes("teknik industri"));
+      if (ti) {
+        setProgramStudi(ti.id);
+      }
     } catch (error) {
       toast.error("Gagal memuat data rekap");
     } finally {
@@ -81,6 +91,10 @@ export default function RekapPage() {
       result = result.filter(d => d.angkatan && d.angkatan.toString() === angkatan);
     }
 
+    if (programStudi !== 'Semua') {
+      result = result.filter(d => d.programStudiId === programStudi);
+    }
+
     setFilteredData(result);
   };
 
@@ -104,11 +118,12 @@ export default function RekapPage() {
         "Nama Mahasiswa": d.mahasiswa?.user?.name || "N/A",
         "NIM": d.mahasiswa?.nim || "N/A",
         "Angkatan": d.angkatan || "N/A",
+        "Program Studi": d.programStudi?.nama || "N/A",
         "Kategori": d.kategori?.nama || "N/A",
         "Level": d.tingkat?.nama || "N/A",
         "Tanggal Mulai": d.tanggalMulai ? new Date(d.tanggalMulai).toLocaleDateString("id-ID") : "N/A",
         "Tanggal Selesai": d.tanggalSelesai ? new Date(d.tanggalSelesai).toLocaleDateString("id-ID") : "N/A",
-        "URL Sertifikat": d.sertifikatUrls && Array.isArray(d.sertifikatUrls) && d.sertifikatUrls.length > 0 ? (d.sertifikatUrls as string[]).join(", ") : "Tidak ada",
+        "URL Sertifikat / Evidence": (d.sertifikatUrls as string[] || []).concat(d.buktiBuktiUrls as string[] || []).join(", ") || "Tidak ada",
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -160,7 +175,9 @@ export default function RekapPage() {
             <label className="text-[12px] font-medium text-gray-400">Kategori</label>
             <Select value={kategori} onValueChange={onSelectChange(setKategori)}>
               <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Kategori" />
+                <SelectValue placeholder="Semua Kategori">
+                  {kategori === 'Semua' ? 'Semua Kategori' : kategoriList.find(k => k.id === kategori)?.nama || kategori}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Semua">Semua Kategori</SelectItem>
@@ -175,7 +192,9 @@ export default function RekapPage() {
             <label className="text-[12px] font-medium text-gray-400">Level</label>
             <Select value={level} onValueChange={onSelectChange(setLevel)}>
               <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Level" />
+                <SelectValue placeholder="Semua Level">
+                  {level === 'Semua' ? 'Semua Level' : level.charAt(0).toUpperCase() + level.slice(1)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Semua">Semua Level</SelectItem>
@@ -198,6 +217,23 @@ export default function RekapPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex flex-col space-y-1">
+            <label className="text-[12px] font-medium text-gray-400">Program Studi</label>
+            <Select value={programStudi} onValueChange={onSelectChange(setProgramStudi)}>
+              <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
+                <SelectValue placeholder="Semua Program Studi">
+                  {programStudi === 'Semua' ? 'Semua Program Studi' : programStudiList.find(p => p.id === programStudi)?.nama || programStudi}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua">Semua Program Studi</SelectItem>
+                {programStudiList.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -213,7 +249,7 @@ export default function RekapPage() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50/50 border-b border-gray-100">
               <tr>
-                {['No','Tahun','Semester','Nama Kegiatan','Jenis Lomba','Penyelenggara','Mahasiswa (NIM)','Angkatan','Kategori', 'Level', 'Aksi'].map(h => (
+                {['No','Tahun','Semester','Nama Kegiatan','Jenis Lomba','Penyelenggara','Mahasiswa (NIM)','Angkatan','Program Studi','Kategori', 'Level', 'Aksi'].map(h => (
                   <th key={h} className="text-left py-4 px-4 text-[13px] font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -232,6 +268,7 @@ export default function RekapPage() {
                     <p className="text-gray-400 text-[12px]">({row.mahasiswa?.nim})</p>
                   </td>
                   <td className="py-4 px-4 text-[14px] text-gray-700">{row.angkatan}</td>
+                  <td className="py-4 px-4 text-[14px] text-gray-700">{row.programStudi?.nama}</td>
                   <td className="py-4 px-4 text-[14px] text-gray-700">{row.kategori?.nama}</td>
                   <td className="py-4 px-4">
                     <span className={`text-[12px] font-semibold px-3 py-1 rounded-full border ${

@@ -124,7 +124,6 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
   }, [isInternasional]);
 
   // Files
-  const [sertifikats, setSertifikats] = useState<File[]>([]);
   const [buktiBukti, setBuktiBukti] = useState<File[]>([]);
 
   // Load provinces on mount via internal proxy (avoids CORS)
@@ -170,28 +169,30 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
       return;
     }
 
+    // Validasi Ukuran: Total maksimal 20MB
+    const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+    const currentTotalSize = buktiBukti.reduce((acc, f) => acc + f.size, 0);
+    const incomingTotalSize = incoming.reduce((acc, f) => acc + f.size, 0);
+
+    if (currentTotalSize + incomingTotalSize > MAX_SIZE) {
+      toast.error("Total ukuran file dokumen tidak boleh melebihi 20MB.");
+      return;
+    }
+
+    // Check individual file size (optional but good practice)
+    const largeFile = incoming.find(f => f.size > MAX_SIZE);
+    if (largeFile) {
+      toast.error(`File ${largeFile.name} melebihi batas 20MB.`);
+      return;
+    }
+
     if (buktiBukti.length + incoming.length > 10) {
-      toast.error("Maksimal 10 file bukti pendukung."); return;
+      toast.error("Maksimal 10 file dokumen pendukung."); return;
     }
     setBuktiBukti((prev) => [...prev, ...incoming]);
   };
 
-  const handleSertifikatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const incoming = Array.from(e.target.files);
-     // Validate types
-    const validTypes = ["application/pdf", "image/jpeg", "image/png"];
-    const hasInvalid = incoming.some((f) => !validTypes.includes(f.type));
-    if (hasInvalid) {
-      toast.error("Hanya file PDF, JPG, atau PNG yang diperbolehkan.");
-      return;
-    }
 
-    if (sertifikats.length + incoming.length > 10) {
-      toast.error("Maksimal 10 file sertifikat."); return;
-    }
-    setSertifikats((prev) => [...prev, ...incoming]);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,6 +202,7 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
     if (!namaPenyelenggara) { toast.error("Nama penyelenggara wajib diisi."); return; }
     const hasilCapaian = hasilSelect === "Lainnya" ? hasilCustom.trim() : hasilSelect;
     if (!hasilCapaian) { toast.error("Hasil/capaian wajib diisi."); return; }
+    if (buktiBukti.length === 0) { toast.error("Dokumen pendukung (Sertifikat/SK) wajib diunggah."); return; }
 
     setShowConfirmDialog(true);
   };
@@ -211,18 +213,8 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
     
     startTransition(async () => {
       toast.loading("Mengupload file...", { id: "lapor-toast" });
-      let sertifikatUrls: string[] | undefined;
       let buktiBuktiUrls: string[] | undefined;
 
-      if (sertifikats.length > 0) {
-        const urls: string[] = [];
-        for (const file of sertifikats) {
-          const res = await uploadFileToR2(file, "sertifikat");
-          if ("error" in res) { toast.error(`Gagal mengunggah ${file.name}: ${res.error}`, { id: "lapor-toast" }); return; }
-          urls.push(res.url);
-        }
-        sertifikatUrls = urls;
-      }
       if (buktiBukti.length > 0) {
         const urls: string[] = [];
         for (const file of buktiBukti) {
@@ -259,7 +251,7 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
         namaLokasi: namaLokasi || undefined,
         tipePartisipasi: isTim ? "TIM" : "INDIVIDU",
         anggotaTim: isTim ? teamMembers.filter((m) => m.nim || m.nama).map(m => ({ ...m, angkatan: parseInt(m.angkatan) || new Date().getFullYear() })) : undefined,
-        sertifikatUrls,
+        sertifikatUrls: undefined,
         buktiBuktiUrls,
       });
 
@@ -578,48 +570,15 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
             )}
           </div>
 
-          {/* Sertifikat */}
-          <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat (Maks. 10 file, PDF/JPG/PNG)</label>
-            <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${sertifikats.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleSertifikatChange} disabled={sertifikats.length >= 10} />
-              <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
-              <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih sertifikat</span>
-              <span className="text-[13px] text-gray-400 mt-1">{sertifikats.length}/10 file dipilih (maks. 5MB per file)</span>
-            </label>
-            {sertifikats.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {sertifikats.map((f, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-xl p-3 bg-white flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center">
-                        {f.type.includes("image") ? (
-                          <ImageIcon className="h-4 w-4 text-[#50c878]" />
-                        ) : (
-                          <FileText className="h-4 w-4 text-[#50c878]" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-semibold text-gray-900 truncate max-w-xs">{f.name}</p>
-                        <p className="text-[11px] text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => setSertifikats((prev) => prev.filter((_, i) => i !== idx))} className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Bukti Pendukung */}
+
+          {/* Sertifikat/Dokumen Pendukung/SK Lomba */}
           <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung (Maks. 10 file, PDF/Word/JPG/PNG)</label>
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat/Dokumen Pendukung/SK Lomba <span className="text-red-500">*</span> (Maks. 10 file, PDF/Word/JPG/PNG)</label>
             <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${buktiBukti.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
               <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 10} />
               <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
-              <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih</span>
+              <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih file</span>
               <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/10 file dipilih (PDF/Word/JPG/PNG)</span>
             </label>
             {/* Template Download */}

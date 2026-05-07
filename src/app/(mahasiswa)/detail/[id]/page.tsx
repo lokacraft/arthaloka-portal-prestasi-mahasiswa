@@ -43,8 +43,10 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
   if (!prestasi || prestasi.mahasiswaId !== user.mahasiswaId) notFound();
 
   const anggotaTim = prestasi.anggotaTim as { nim: string; nama: string; angkatan: number }[] | null;
-  const buktiBuktiUrls = prestasi.buktiBuktiUrls as string[] | null;
-  const sertifikatUrls = prestasi.sertifikatUrls as string[] | null;
+  const combinedFiles = [
+    ...(prestasi.sertifikatUrls as string[] || []),
+    ...(prestasi.buktiBuktiUrls as string[] || [])
+  ];
   const tempatLengkap = [prestasi.namaLokasi, prestasi.kota, prestasi.provinsi].filter(Boolean).join(", ");
 
   return (
@@ -82,32 +84,16 @@ export default async function DetailPrestasiPage({ params }: { params: Promise<{
 
         {/* Side Cards */}
         <div className="flex flex-col gap-4">
-          {sertifikatUrls && sertifikatUrls.length > 0 && (
+          {combinedFiles.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-5">
               <div className="flex items-center gap-2 mb-3">
                 <FileText className="h-4 w-4 text-gray-500" />
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat ({sertifikatUrls.length})</span>
+                <span className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat / Dokumen Pendukung ({combinedFiles.length})</span>
               </div>
               <div className="space-y-2">
-                {sertifikatUrls.map((url, i) => (
+                {combinedFiles.map((url, i) => (
                   <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] text-[#50c878] hover:text-[#006400] transition-colors">
-                    <ExternalLink className="h-3.5 w-3.5" />Lihat Sertifikat {i + 1}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {buktiBuktiUrls && buktiBuktiUrls.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-4 w-4 text-gray-500" />
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">Bukti Pendukung ({buktiBuktiUrls.length})</span>
-              </div>
-              <div className="space-y-2">
-                {buktiBuktiUrls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] text-[#50c878] hover:text-[#006400] transition-colors">
-                    <ExternalLink className="h-3.5 w-3.5" />Bukti {i + 1}
+                    <ExternalLink className="h-3.5 w-3.5" />Lihat Dokumen {i + 1}
                   </a>
                 ))}
               </div>

@@ -80,7 +80,11 @@ export default function DashboardAkreditasiPage() {
       });
       setTargets(newT);
       setKategoriList(kats);
-      setProgramStudiList(prodi);
+      const tiOnly = prodi.filter((p: any) => p.nama.toLowerCase().includes("teknik industri"));
+      setProgramStudiList(tiOnly);
+      if (tiOnly.length > 0) {
+        setProgramStudiFilter(tiOnly[0].id);
+      }
     } catch (error) {
       toast.error("Gagal memuat data master");
     }
@@ -298,12 +302,25 @@ export default function DashboardAkreditasiPage() {
             <label className="text-[12px] font-medium text-gray-400">Kategori</label>
             <Select value={kategoriFilter} onValueChange={onSelectChange(setKategoriFilter)}>
               <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Kategori" />
+                <SelectValue placeholder="Semua Kategori">
+                  {kategoriFilter === 'Semua' ? 'Semua Kategori' : 
+                   kategoriFilter === 'Akademik' ? 'Akademik' :
+                   kategoriFilter === 'Non-Akademik' ? 'Non-Akademik' :
+                   kategoriList.find(k => k.id === kategoriFilter)?.nama || kategoriFilter}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Semua">Semua Kategori</SelectItem>
                 <SelectItem value="Akademik">Akademik</SelectItem>
                 <SelectItem value="Non-Akademik">Non-Akademik</SelectItem>
+                {kategoriList
+                  .filter(k => {
+                    const n = k.nama.toLowerCase();
+                    return n !== 'akademik' && n !== 'non-akademik' && n !== 'non akademik';
+                  })
+                  .map(k => (
+                    <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -336,7 +353,6 @@ export default function DashboardAkreditasiPage() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Semua">Semua Program Studi</SelectItem>
                 {programStudiList.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
                 ))}

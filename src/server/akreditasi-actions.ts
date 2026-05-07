@@ -281,19 +281,25 @@ export async function getRekapLengkap({
   }
 }
 
-export async function getDetailPrestasiExport(tahunSasaran: number, rentangTahun: number) {
+export async function getDetailPrestasiExport(tahunSasaran: number, rentangTahun: number, programStudiId?: string) {
   try {
     const startYear = tahunSasaran - rentangTahun + 1;
     const endYear = tahunSasaran;
 
-    const data = await prisma.prestasi.findMany({
-      where: {
-        statusValidasi: 'APPROVED',
-        tahun: {
-          gte: startYear,
-          lte: endYear,
-        },
+    const where: any = {
+      statusValidasi: 'APPROVED',
+      tahun: {
+        gte: startYear,
+        lte: endYear,
       },
+    };
+
+    if (programStudiId && programStudiId !== 'Semua') {
+      where.programStudiId = programStudiId;
+    }
+
+    const data = await prisma.prestasi.findMany({
+      where,
       include: {
         mahasiswa: true,
         kategori: true,

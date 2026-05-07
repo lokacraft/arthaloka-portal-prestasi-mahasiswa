@@ -184,20 +184,20 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
       )}
 
       <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)]">
-        <h2 className="text-[16px] font-bold text-gray-900 mb-6">Bukti Pendukung</h2>
+        <h2 className="text-[16px] font-bold text-gray-900 mb-6">Sertifikat / Dokumen Pendukung</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Sertifikat Files */}
-          {prestasi.sertifikatUrls && (prestasi.sertifikatUrls as string[]).length > 0 && (
-            <div className="border border-gray-100 bg-gray-50/50 rounded-2xl p-6">
+          {/* Combined Files */}
+          {[...(prestasi.sertifikatUrls as string[] || []), ...(prestasi.buktiBuktiUrls as string[] || [])].length > 0 ? (
+            <div className="col-span-full border border-gray-100 bg-gray-50/50 rounded-2xl p-6">
               <span className="text-[14px] font-bold text-gray-700 block mb-4 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#50c878]" /> Sertifikat ({(prestasi.sertifikatUrls as string[]).length})
+                <FileText className="h-4 w-4 text-[#50c878]" /> File Dokumen ({[...(prestasi.sertifikatUrls as string[] || []), ...(prestasi.buktiBuktiUrls as string[] || [])].length})
               </span>
               <div className="space-y-3">
-                {(prestasi.sertifikatUrls as string[]).map((url, i) => (
+                {[...(prestasi.sertifikatUrls as string[] || []), ...(prestasi.buktiBuktiUrls as string[] || [])].map((url, i) => (
                   <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="text-[13px] text-gray-600 truncate">{url.split('/').pop() || `Sertifikat ${i+1}`}</span>
+                      <span className="text-[13px] text-gray-600 truncate">{url.split('/').pop() || `Dokumen ${i+1}`}</span>
                     </div>
                     <button 
                       onClick={() => {
@@ -212,33 +212,9 @@ export default function DetailVerifikasiContent({ prestasi, kategoriList, tingka
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Evidence Files */}
-          {prestasi.buktiBuktiUrls && (prestasi.buktiBuktiUrls as string[]).length > 0 && (
-            <div className="border border-gray-100 bg-gray-50/50 rounded-2xl p-6">
-              <span className="text-[14px] font-bold text-gray-700 block mb-4 flex items-center gap-2">
-                <Users className="h-4 w-4 text-gray-400" /> Bukti Pendukung Lainnya ({(prestasi.buktiBuktiUrls as string[]).length})
-              </span>
-              <div className="space-y-3">
-                {(prestasi.buktiBuktiUrls as string[]).map((url, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="text-[13px] text-gray-600 truncate">{url.split('/').pop()}</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedFile(url);
-                        setPreviewOpen(true);
-                      }}
-                      className="text-[#50c878] text-[12px] font-bold hover:underline shrink-0 ml-2"
-                    >
-                      Buka
-                    </button>
-                  </div>
-                ))}
-              </div>
+          ) : (
+            <div className="col-span-full text-center py-8 text-gray-400">
+              Tidak ada dokumen yang dilampirkan.
             </div>
           )}
         </div>

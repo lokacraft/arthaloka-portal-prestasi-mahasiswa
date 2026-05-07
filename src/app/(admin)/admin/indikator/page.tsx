@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Info, Settings, AlertTriangle, CheckCircle, XCircle, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getNmTs, getTargets, updateTarget, getRekapPrestasiAkreditasi, getDetailPrestasiExport, getKategoriPrestasi } from '@/server/akreditasi-actions';
+import { getProgramStudiList } from '@/server/prestasi-actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
 
@@ -20,6 +21,9 @@ export default function IndikatorPage() {
   
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
   const [kategoriFilter, setKategoriFilter] = useState('Semua');
+  
+  const [programStudiList, setProgramStudiList] = useState<{id: string, nama: string}[]>([]);
+  const [programStudiFilter, setProgramStudiFilter] = useState('Semua');
   
   const [loadingAuto, setLoadingAuto] = useState(false);
   const [nmtsVal, setNmtsVal] = useState<number | null>(null);
@@ -41,7 +45,7 @@ export default function IndikatorPage() {
 
   useEffect(() => {
     fetchAutoData();
-  }, [tahunSasaran, rentangMode, tahunMulaiCustom, kategoriFilter]);
+  }, [tahunSasaran, rentangMode, tahunMulaiCustom, kategoriFilter, programStudiFilter]);
 
   const fetchInitialData = async () => {
     try {
@@ -59,6 +63,10 @@ export default function IndikatorPage() {
       // 2. Fetch Kategori
       const kats = await getKategoriPrestasi();
       setKategoriList(kats);
+
+      // 3. Fetch Program Studi
+      const prodis = await getProgramStudiList();
+      setProgramStudiList(prodis);
     } catch (error) {
       console.error(error);
     }
@@ -78,7 +86,7 @@ export default function IndikatorPage() {
       const rentangValue = 5;
 
       // 3. Fetch Rekap Prestasi
-      const res = await getRekapPrestasiAkreditasi(ts, rentangValue, kategoriFilter);
+      const res = await getRekapPrestasiAkreditasi(ts, rentangValue, kategoriFilter, programStudiFilter);
       setRekapAuto(res);
       
     } catch (error) {
@@ -112,7 +120,7 @@ export default function IndikatorPage() {
       const ts = parseInt(tahunSasaran);
       const rentangValue = 5;
 
-      const data = await getDetailPrestasiExport(ts, rentangValue);
+      const data = await getDetailPrestasiExport(ts, rentangValue, programStudiFilter);
       
       let filtered = data;
       if (kategoriFilter !== 'Semua') {
@@ -249,6 +257,23 @@ export default function IndikatorPage() {
                   <SelectItem value="Semua">Semua Kategori</SelectItem>
                   <SelectItem value="Akademik">Akademik</SelectItem>
                   <SelectItem value="Non-Akademik">Non-Akademik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[14px] font-semibold text-[#1a1a1a]">Program Studi</label>
+              <Select value={programStudiFilter} onValueChange={(val) => val && setProgramStudiFilter(val)}>
+                <SelectTrigger className="w-full bg-[#f8f9fa] text-gray-800 text-[15px] rounded-xl h-[46px] border-gray-200">
+                  <SelectValue placeholder="Semua Program Studi">
+                    {programStudiFilter === 'Semua' ? 'Semua Program Studi' : programStudiList.find(p => p.id === programStudiFilter)?.nama}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Semua">Semua Program Studi</SelectItem>
+                  {programStudiList.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
