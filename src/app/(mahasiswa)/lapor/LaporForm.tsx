@@ -574,12 +574,16 @@ export default function LaporForm({ mahasiswaId, nim, kategoriList, tingkatList,
 
           {/* Sertifikat/Dokumen Pendukung/SK Lomba */}
           <div className="space-y-2">
-            <label className="text-[14px] font-semibold text-[#1a1a1a]">Sertifikat/Dokumen Pendukung/SK Lomba <span className="text-red-500">*</span> (Maks. 10 file, PDF/Word/JPG/PNG)</label>
+            <label className="text-[14px] font-semibold text-[#1a1a1a]">
+              Sertifikat/Dokumen Pendukung/SK Lomba <span className="text-red-500">*</span>
+              <span className="ml-1.5 text-[#50c878] font-medium">(Wajib: Sertifikat/SK + Bukti Pendukung)</span>
+            </label>
+            <p className="text-[13px] text-gray-400 -mt-1">Maks. 10 file, PDF/Word/JPG/PNG</p>
             <label className={`w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl px-6 py-8 bg-[#f8f9fa] transition-colors cursor-pointer ${buktiBukti.length >= 10 ? "opacity-50 pointer-events-none" : "hover:border-[#50c878]/50 hover:bg-gray-50"}`}>
               <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" multiple className="hidden" onChange={handleBuktiChange} disabled={buktiBukti.length >= 10} />
               <UploadCloud className="h-9 w-9 text-gray-400 mb-2" />
               <span className="text-[14px] font-semibold text-[#50c878]">Seret atau klik untuk memilih file</span>
-              <span className="text-[13px] text-gray-400 mt-1">{buktiBukti.length}/10 file dipilih (PDF/Word/JPG/PNG)</span>
+              <span className="text-[13px] text-gray-400 mt-1">Wajib: Sertifikat/SK + Bukti Pendukung ({buktiBukti.length}/10 file dipilih)</span>
             </label>
             {/* Template Download */}
             <a
