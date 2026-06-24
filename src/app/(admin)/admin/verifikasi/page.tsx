@@ -105,6 +105,7 @@ export default async function AntreanVerifikasiPage({ searchParams }: PageProps)
                 size="sm"
                 disabled={page <= 1}
                 render={page > 1 ? <Link href={`/admin/verifikasi?page=${page - 1}&limit=${limit}`} /> : undefined}
+                nativeButton={page > 1 ? false : true}
                 className="h-9 px-3 rounded-lg"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" /> Sebelumnya
@@ -116,6 +117,7 @@ export default async function AntreanVerifikasiPage({ searchParams }: PageProps)
                     variant={p === page ? "default" : "ghost"}
                     size="sm"
                     render={p !== page ? <Link href={`/admin/verifikasi?page=${p}&limit=${limit}`} /> : undefined}
+                    nativeButton={p !== page ? false : true}
                     className={`h-9 w-9 rounded-lg ${p === page ? "bg-[#50c878] hover:bg-[#43b569]" : ""}`}
                   >
                     {p}
@@ -127,6 +129,7 @@ export default async function AntreanVerifikasiPage({ searchParams }: PageProps)
                 size="sm"
                 disabled={page >= totalPages}
                 render={page < totalPages ? <Link href={`/admin/verifikasi?page=${page + 1}&limit=${limit}`} /> : undefined}
+                nativeButton={page < totalPages ? false : true}
                 className="h-9 px-3 rounded-lg"
               >
                 Selanjutnya <ChevronRight className="h-4 w-4 ml-1" />

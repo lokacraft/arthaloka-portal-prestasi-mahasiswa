@@ -1,0 +1,33 @@
+Kamu adalah Lead QA Engineer dan System Architect. Saya memberikan seluruh codebase dari project "Sistem Prestasi Mahasiswa" (Stack: Next.js App Router, TypeScript, Prisma, Supabase, Better Auth). 
+
+TUGAS WAJIB (Systematic Analysis):
+1. BACA & ANALISIS KESELURUHAN KODE: Telusuri setiap file yang dilampirkan. Jangan ada logika backend yang terlewat.
+2. FOKUS BACKEND & DATA & FRONTEND: Analisis secara mendalam `schema.prisma` untuk relasi entitas, file konfigurasi `better-auth` beserta middleware-nya, dan seluruh Server Actions/API Routes yang menangani CRUD prestasi serta upload file ke Supabase DAN IMPLEMENTASINYA DI FRONTEND.
+3. EKSTRAKSI ROLE: Identifikasi semua aktor/role yang diimplementasikan di kode beserta limitasi hak aksesnya.
+4. MAPPING ALUR BISNIS: Pahami alur nyata dari kode (jangan berasumsi). Bagaimana data disubmit, divalidasi admin, dan bagaimana poin dikalkulasi.
+
+BERDASARKAN ANALISIS DI ATAS, buatkan Strategi UAT (User Acceptance Testing) yang komprehensif dan terpadu.
+
+FORMAT OUTPUT:
+Output HANYA boleh berisi format Markdown mentah (tanpa basa-basi atau perkenalan di awal/akhir) karena output ini akan langsung di-pipe ke dalam file `UAT.md`.
+
+Gunakan struktur berikut untuk UAT.md:
+# UAT Strategy - Sistem Prestasi Mahasiswa
+
+## 1. System Overview & Scope
+(Deskripsikan sistem berdasarkan apa yang kamu temukan di codebase)
+
+## 2. Actors & Permissions
+(Daftar role dan apa saja yang bisa mereka lakukan berdasarkan Better Auth/middleware)
+
+## 3. Database & Backend Validation Points
+(Titik-titik kritis dari skema Prisma dan Supabase yang harus diuji, misalnya validasi tipe file atau relasi on-delete)
+
+## 4. End-to-End (E2E) Test Scenarios
+(Buat skenario dari awal mahasiswa login, upload, hingga admin validasi dan poin bertambah)
+
+## 5. Detailed Test Cases (Gherkin Syntax)
+(Minimal 5 test case paling kritis menggunakan format Given-When-Then, lengkap dengan mock data)
+
+## 6. Technical & Destructive Edge Cases
+(Identifikasi celah teknis dari kode yang ada: misal bagaimana jika file upload gagal di tengah jalan, atau ukuran file melebihi limit)

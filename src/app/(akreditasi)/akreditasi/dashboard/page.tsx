@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Download, TrendingUp, CheckCircle2, ExternalLink, Filter, Loader2 } from 'lucide-react';
+import { TrendingUp, Award, Users, Target, Loader2, Download, Filter, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { 
@@ -19,38 +19,39 @@ import {
 } from '@/server/akreditasi-actions';
 import { getProgramStudiList } from '@/server/prestasi-actions';
 
+// Dynamic imports for Recharts
+const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
+
 const levelColor: Record<string, string> = {
   Internasional: 'bg-blue-50 text-blue-600 border border-blue-100',
   Nasional: 'bg-[#eafaf1] text-[#50c878] border border-[#50c878]/20',
   Wilayah: 'bg-amber-50 text-amber-600 border border-amber-100',
 };
 
-// Base UI onValueChange handler wrapper
 function onSelectChange(setter: React.Dispatch<React.SetStateAction<any>>) {
   return (value: string | null) => { if (value !== null) setter(value); };
 }
 
 export default function DashboardAkreditasiPage() {
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportMode, setExportMode] = useState<'all' | 'filtered'>('all');
   
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
-  // Filters
   const [tahunSasaran, setTahunSasaran] = useState(currentYear.toString());
   const [rentangMode, setRentangMode] = useState<'5'>('5');
   const [kategoriFilter, setKategoriFilter] = useState('Semua');
   const [levelFilter, setLevelFilter] = useState('Semua');
-  const [programStudiFilter, setProgramStudiFilter] = useState('Semua');
+  const [programStudiFilter, setProgramStudiFilter] = useState('');
 
-  // Master Data
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
-  const [programStudiList, setProgramStudiList] = useState<{id: string, nama: string}[]>([]);
   const [nmtsVal, setNmtsVal] = useState<number | null>(null);
   const [targets, setTargets] = useState<{ RI: number, RN: number, RW: number }>({ RI: 0.2, RN: 2.0, RW: 4.0 });
 
-  // Computed Data
   const [loading, setLoading] = useState(true);
   const [rekapAuto, setRekapAuto] = useState<{ NI: number, NN: number, NW: number }>({ NI: 0, NN: 0, NW: 0 });
   const [trendData, setTrendData] = useState<any[]>([]);
@@ -61,7 +62,9 @@ export default function DashboardAkreditasiPage() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
+    if (programStudiFilter) {
+      fetchDashboardData();
+    }
   }, [tahunSasaran, rentangMode, kategoriFilter, levelFilter, programStudiFilter]);
 
   const fetchInitialData = async () => {
@@ -81,7 +84,6 @@ export default function DashboardAkreditasiPage() {
       setTargets(newT);
       setKategoriList(kats);
       const tiOnly = prodi.filter((p: any) => p.nama.toLowerCase().includes("teknik industri"));
-      setProgramStudiList(tiOnly);
       if (tiOnly.length > 0) {
         setProgramStudiFilter(tiOnly[0].id);
       }
@@ -99,9 +101,9 @@ export default function DashboardAkreditasiPage() {
       const [nmtsDoc, rekap, trend, details] = await Promise.all([
         getNmTs(ts),
         getRekapPrestasiAkreditasi(ts, rentang, kategoriFilter, programStudiFilter),
-        getTrendPrestasi(ts, rentang, programStudiFilter),
+        getTrendPrestasi(ts, rentang, programStudiFilter, kategoriFilter),
         getRekapLengkap({ 
-          tahun: undefined, // we fetch all for the last 5 years based on TS
+          tahun: undefined,
           programStudiId: programStudiFilter
         })
       ]);
@@ -130,7 +132,6 @@ export default function DashboardAkreditasiPage() {
       });
       setTrendData(filteredTrend);
       
-      // Filter detailed data based on TS and Rentang (which is 5 years for the table as requested "Rekap Data 5 Tahun Terakhir")
       const startYearTable = ts - 4;
       let filteredDetails = details.filter(d => d.tahun >= startYearTable && d.tahun <= ts);
       
@@ -148,12 +149,8 @@ export default function DashboardAkreditasiPage() {
         filteredDetails = filteredDetails.filter(d => d.tingkat.nama.toLowerCase() === levelFilter.toLowerCase());
       }
       
-      // ----------------------------------------------------
-      // Compute 10-row summary for the Table
-      // ----------------------------------------------------
       const summaryRows = [];
       for (let y = ts; y >= startYearTable; y--) {
-        // Akademik
         const akad = filteredDetails.filter(d => {
           const nama = d.kategori?.nama.toLowerCase() || '';
           return d.tahun === y && nama.includes('akademik') && !nama.includes('non');
@@ -170,7 +167,6 @@ export default function DashboardAkreditasiPage() {
           total: akad.length
         });
 
-        // Non-Akademik
         const nonAkad = filteredDetails.filter(d => {
           const nama = d.kategori?.nama.toLowerCase() || '';
           return d.tahun === y && (!nama.includes('akademik') || nama.includes('non'));
@@ -207,8 +203,6 @@ export default function DashboardAkreditasiPage() {
   const handleExport = () => {
     try {
       const wb = XLSX.utils.book_new();
-
-      // 1. Indikator
       const indicatorExport = indicators.map(ind => ({
         "Indikator": ind.label,
         "Capaian (%)": rasioAuto(ind.value).toFixed(2),
@@ -217,8 +211,6 @@ export default function DashboardAkreditasiPage() {
       }));
       const wsIndikator = XLSX.utils.json_to_sheet(indicatorExport);
       XLSX.utils.book_append_sheet(wb, wsIndikator, "Capaian Indikator");
-
-      // 2. Trend Data
       const trendExport = trendData.map((d: any) => ({
         "Tahun": d.year,
         "Internasional": d.int,
@@ -227,8 +219,6 @@ export default function DashboardAkreditasiPage() {
       }));
       const wsTrend = XLSX.utils.json_to_sheet(trendExport);
       XLSX.utils.book_append_sheet(wb, wsTrend, "Tren Prestasi");
-
-      // 3. Matrix Summary
       const matrixExport = tableData.map((d: any) => ({
         "Tahun": d.tahun,
         "Kategori": d.kategori,
@@ -239,7 +229,6 @@ export default function DashboardAkreditasiPage() {
       }));
       const wsMatrix = XLSX.utils.json_to_sheet(matrixExport);
       XLSX.utils.book_append_sheet(wb, wsMatrix, "Matrix 5 Tahun");
-
       XLSX.writeFile(wb, `Dashboard_Akreditasi_${tahunSasaran}.xlsx`);
       toast.success("Berhasil mengekspor data dashboard");
       setExportOpen(false);
@@ -249,14 +238,13 @@ export default function DashboardAkreditasiPage() {
   };
 
   const chartConfig = {
-    int: { label: "Internasional", color: "#50c878" },
+    int: { label: "Internasional", color: "#3b82f6" },
     nas: { label: "Nasional", color: "#22c55e" },
-    wil: { label: "Wilayah", color: "#86efac" },
+    wil: { label: "Wilayah", color: "#f59e0b" },
   };
 
   return (
     <div className="flex flex-col gap-6 pb-8 font-sans animate-in fade-in duration-500">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight">Dashboard Akreditasi</h1>
@@ -267,7 +255,6 @@ export default function DashboardAkreditasiPage() {
         </Button>
       </div>
 
-      {/* Filter */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] p-5">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-4 w-4 text-gray-500" />
@@ -285,9 +272,8 @@ export default function DashboardAkreditasiPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-1 flex flex-col">
-            <label className="text-[12px] font-medium text-gray-400">Rentang (Untuk Indikator)</label>
+            <label className="text-[12px] font-medium text-gray-400">Rentang</label>
             <Select value={rentangMode} onValueChange={onSelectChange(setRentangMode)}>
               <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
                 <SelectValue placeholder="Rentang" />
@@ -338,24 +324,6 @@ export default function DashboardAkreditasiPage() {
                 <SelectItem value="internasional">Internasional</SelectItem>
                 <SelectItem value="nasional">Nasional</SelectItem>
                 <SelectItem value="wilayah">Wilayah</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1 flex flex-col">
-            <label className="text-[12px] font-medium text-gray-400">Program Studi</label>
-            <Select value={programStudiFilter} onValueChange={onSelectChange(setProgramStudiFilter)}>
-              <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Program Studi">
-                  {programStudiFilter && programStudiFilter !== 'Semua' 
-                    ? programStudiList.find((p: any) => p.id === programStudiFilter)?.nama 
-                    : "Semua Program Studi"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {programStudiList.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
-                ))}
               </SelectContent>
             </Select>
           </div>

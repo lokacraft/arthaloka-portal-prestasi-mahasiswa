@@ -115,7 +115,6 @@ export default function SignInPage() {
                 <input 
                   name="email"
                   type="email" 
-                  required
                   placeholder="Masukkan Email" 
                   className="w-full bg-[#f3f4f6] text-gray-800 placeholder-gray-400 text-[15px] rounded-xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50 focus:bg-white border text-base border-transparent transition-all"
                 />
@@ -129,7 +128,6 @@ export default function SignInPage() {
                 <input 
                   name="password"
                   type={showPassword ? "text" : "password"} 
-                  required
                   placeholder="Masukkan password" 
                   className="w-full bg-[#f3f4f6] text-gray-800 placeholder-gray-400 text-[15px] rounded-xl pl-12 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-[#50c878]/50 focus:bg-white border text-base border-transparent transition-all"
                 />

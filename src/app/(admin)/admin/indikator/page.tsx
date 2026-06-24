@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { getNmTs, getTargets, updateTarget, getRekapPrestasiAkreditasi, getDetailPrestasiExport, getKategoriPrestasi } from '@/server/akreditasi-actions';
 import { getProgramStudiList } from '@/server/prestasi-actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
 export default function IndikatorPage() {
@@ -33,6 +35,7 @@ export default function IndikatorPage() {
 
   // Settings Danger Area
   const [showSettings, setShowSettings] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(false);
   const [editTargets, setEditTargets] = useState({ RI: "0.2", RN: "2.0", RW: "4.0" });
   const [savingTargets, setSavingTargets] = useState(false);
 
@@ -67,6 +70,9 @@ export default function IndikatorPage() {
       // 3. Fetch Program Studi
       const prodis = await getProgramStudiList();
       setProgramStudiList(prodis);
+      if (prodis.length > 0 && programStudiFilter === 'Semua') {
+        setProgramStudiFilter(prodis[0].id);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -97,18 +103,17 @@ export default function IndikatorPage() {
   };
 
   const handleSaveTargets = async () => {
-    if (!window.confirm("Apakah Anda yakin ingin mengubah ambang batas target? Ini akan mempengaruhi status seluruh laporan.")) return;
     try {
       setSavingTargets(true);
       await updateTarget("RI", parseFloat(editTargets.RI));
       await updateTarget("RN", parseFloat(editTargets.RN));
       await updateTarget("RW", parseFloat(editTargets.RW));
       await fetchInitialData();
-      setShowSettings(false);
-      alert("Target berhasil diperbarui!");
+      setConfirmDialog(false);
+      toast.success("Target berhasil diperbarui!");
     } catch (error) {
       console.error(error);
-      alert("Gagal mengupdate target");
+      toast.error("Gagal mengupdate target");
     } finally {
       setSavingTargets(false);
     }
@@ -188,35 +193,51 @@ export default function IndikatorPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] p-6 md:p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-[18px] font-semibold text-[#1a1a1a]">Filter Data</h2>
-            <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)} className="text-orange-600 border-orange-200 hover:bg-orange-50">
-              <Settings className="w-4 h-4 mr-2" /> Pengaturan Target
-            </Button>
           </div>
-
-          {showSettings && (
-            <div className="bg-orange-50 border border-orange-200 p-5 rounded-xl mb-6">
-              <div className="flex items-center gap-2 text-orange-800 font-semibold mb-4">
-                <AlertTriangle className="w-5 h-5" /> Danger Area: Ubah Ambang Batas Target (%)
+          <div className="bg-orange-50 border border-orange-200 p-5 rounded-xl mb-6">
+            <div className="flex items-center gap-2 text-orange-800 font-semibold mb-4">
+              <AlertTriangle className="w-5 h-5" /> <span className="font-bold">Danger Area</span> Pengaturan Ambang Batas Target
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="text-[13px] text-orange-700 font-medium">Target Internasional (RI) (%)</label>
+                <input type="number" step="0.1" value={editTargets.RI} onChange={e => setEditTargets(prev => ({...prev, RI: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
               </div>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="text-[13px] text-orange-700 font-medium">Target RI (%)</label>
-                  <input type="number" step="0.1" value={editTargets.RI} onChange={e => setEditTargets(prev => ({...prev, RI: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
-                </div>
-                <div>
-                  <label className="text-[13px] text-orange-700 font-medium">Target RN (%)</label>
-                  <input type="number" step="0.1" value={editTargets.RN} onChange={e => setEditTargets(prev => ({...prev, RN: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
-                </div>
-                <div>
-                  <label className="text-[13px] text-orange-700 font-medium">Target RW (%)</label>
-                  <input type="number" step="0.1" value={editTargets.RW} onChange={e => setEditTargets(prev => ({...prev, RW: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
-                </div>
+              <div>
+                <label className="text-[13px] text-orange-700 font-medium">Target Nasional (RN) (%)</label>
+                <input type="number" step="0.1" value={editTargets.RN} onChange={e => setEditTargets(prev => ({...prev, RN: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
               </div>
-              <Button onClick={handleSaveTargets} disabled={savingTargets} className="bg-orange-600 hover:bg-orange-700 text-white w-full h-11 font-semibold rounded-xl">
-                {savingTargets ? "Menyimpan..." : "Simpan Perubahan Target"}
+              <div>
+                <label className="text-[13px] text-orange-700 font-medium">Target Wilayah/Lokal (RW) (%)</label>
+                <input type="number" step="0.1" value={editTargets.RW} onChange={e => setEditTargets(prev => ({...prev, RW: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50" />
+              </div>
+            </div>
+            <div className="w-full flex items-center justify-end">
+              <Button onClick={() => setConfirmDialog(true)} disabled={savingTargets} className="bg-orange-600 hover:bg-orange-700 text-white w-fit h-11 px-4 font-semibold rounded-xl">
+                Simpan Perubahan Target
               </Button>
             </div>
-          )}
+          </div>
+
+          <Dialog open={confirmDialog} onOpenChange={setConfirmDialog}>
+            <DialogPortal>
+              <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
+              <DialogContent className="sm:max-w-[400px] p-6 bg-white rounded-2xl gap-0 shadow-2xl">
+                <DialogHeader className="mb-4">
+                  <DialogTitle className="text-[18px] font-semibold text-gray-900">Konfirmasi Penyimpanan</DialogTitle>
+                  <DialogDescription className="text-[14px] text-gray-500">
+                    Apakah Anda yakin ingin mengubah ambang batas target? Ini akan mempengaruhi status perhitungan seluruh laporan.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-end gap-3 mt-4">
+                  <Button variant="outline" onClick={() => setConfirmDialog(false)} className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold h-11">Batal</Button>
+                  <Button onClick={handleSaveTargets} disabled={savingTargets} className="bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl h-11">
+                    {savingTargets ? "Menyimpan..." : "Ya, Simpan"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </DialogPortal>
+          </Dialog>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
@@ -265,12 +286,11 @@ export default function IndikatorPage() {
               <label className="text-[14px] font-semibold text-[#1a1a1a]">Program Studi</label>
               <Select value={programStudiFilter} onValueChange={(val) => val && setProgramStudiFilter(val)}>
                 <SelectTrigger className="w-full bg-[#f8f9fa] text-gray-800 text-[15px] rounded-xl h-[46px] border-gray-200">
-                  <SelectValue placeholder="Semua Program Studi">
-                    {programStudiFilter === 'Semua' ? 'Semua Program Studi' : programStudiList.find(p => p.id === programStudiFilter)?.nama}
+                  <SelectValue placeholder="Pilih Program Studi">
+                    {programStudiList.find(p => p.id === programStudiFilter)?.nama}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Semua">Semua Program Studi</SelectItem>
                   {programStudiList.map(p => (
                     <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
                   ))}

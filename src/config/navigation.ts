@@ -9,13 +9,14 @@ import {
   Settings,
   Bell,
   LogOut,
-  LucideIcon
+  LucideIcon,
 } from "lucide-react";
 
 export type NavItem = {
   title: string;
   url: string;
   icon: LucideIcon;
+  subItems?: { title: string; url: string }[];
 };
 
 export const navigationConfig: Record<string, NavItem[]> = {
@@ -26,18 +27,31 @@ export const navigationConfig: Record<string, NavItem[]> = {
   ],
   admin: [
     { title: "Dashboard Admin", url: "/admin/dashboard", icon: Home },
-    { title: "Antrean Verifikasi", url: "/admin/verifikasi", icon: ClipboardCheck },
-    { title: "Kelola NM(TS)", url: "/admin/nmts", icon: Calculator },
-    { title: "Indikator Akreditasi", url: "/admin/indikator", icon: BarChart3 },
+    {
+      title: "Antrean Verifikasi",
+      url: "/admin/verifikasi",
+      icon: ClipboardCheck,
+    },
+    {
+      title: "Kelola Akreditasi",
+      url: "#",
+      icon: BarChart3,
+      subItems: [
+        { title: "Kelola NM(TS)", url: "/admin/nmts" },
+        { title: "Indikator Akreditasi", url: "/admin/indikator" },
+      ],
+    },
   ],
   akreditasi: [
-    { title: "Dashboard Akreditasi", url: "/akreditasi/dashboard", icon: BarChart3 },
+    {
+      title: "Dashboard Akreditasi",
+      url: "/akreditasi/dashboard",
+      icon: BarChart3,
+    },
     { title: "Rekap 5 Tahun", url: "/akreditasi/rekap", icon: FileText },
   ],
-  wd1: [
-    { title: "Dashboard Executive", url: "/wd1/dashboard", icon: Home },
-  ],
+  wd1: [{ title: "Dashboard Executive", url: "/wd1/dashboard", icon: Home }],
   kaprodi: [
     { title: "Dashboard Executive", url: "/kaprodi/dashboard", icon: Home },
-  ]
+  ],
 };

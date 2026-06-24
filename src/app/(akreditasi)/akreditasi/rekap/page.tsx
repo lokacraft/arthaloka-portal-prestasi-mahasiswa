@@ -9,6 +9,7 @@ import { getRekapLengkap, getKategoriPrestasi } from '@/server/akreditasi-action
 import { getProgramStudiList } from '@/server/prestasi-actions';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import Link from 'next/link';
 
 const levelColor: Record<string, string> = {
   Internasional: 'bg-blue-50 text-blue-600 border border-blue-100',
@@ -22,7 +23,7 @@ function onSelectChange(setter: React.Dispatch<React.SetStateAction<any>>) {
 
 export default function RekapPage() {
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportMode, setExportMode] = useState<'all' | 'filtered'>('all');
+  const [exportMode, setExportMode] = useState<'all' | 'filtered' | 'all_jurusan'>('all');
   
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 5 + i).reverse();
@@ -36,6 +37,7 @@ export default function RekapPage() {
 
   // Data
   const [loading, setLoading] = useState(true);
+  const [rawAllData, setRawAllData] = useState<any[]>([]);
   const [allData, setAllData] = useState<any[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
   const [kategoriList, setKategoriList] = useState<{id: string, nama: string}[]>([]);
@@ -57,13 +59,16 @@ export default function RekapPage() {
         getKategoriPrestasi(),
         getProgramStudiList()
       ]);
-      setAllData(data);
+      setRawAllData(data);
       setKategoriList(kats);
       setProgramStudiList(prodi);
       
       const ti = prodi.find((p: any) => p.nama.toLowerCase().includes("teknik industri"));
       if (ti) {
+        setAllData(data.filter((d: any) => d.programStudiId === ti.id));
         setProgramStudi(ti.id);
+      } else {
+        setAllData(data);
       }
     } catch (error) {
       toast.error("Gagal memuat data rekap");
@@ -107,7 +112,7 @@ export default function RekapPage() {
 
   const handleExport = () => {
     try {
-      const dataToExport = exportMode === 'filtered' ? filteredData : allData;
+      const dataToExport = exportMode === 'filtered' ? filteredData : exportMode === 'all_jurusan' ? rawAllData : allData;
       const exportData = dataToExport.map((d: any, i: number) => ({
         "No": i + 1,
         "Tahun": d.tahun,
@@ -217,23 +222,6 @@ export default function RekapPage() {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col space-y-1">
-            <label className="text-[12px] font-medium text-gray-400">Program Studi</label>
-            <Select value={programStudi} onValueChange={onSelectChange(setProgramStudi)}>
-              <SelectTrigger className="bg-[#f8f9fa] rounded-lg h-11 border-gray-200 text-[14px] w-full">
-                <SelectValue placeholder="Semua Program Studi">
-                  {programStudi === 'Semua' ? 'Semua Program Studi' : programStudiList.find(p => p.id === programStudi)?.nama || programStudi}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Semua">Semua Program Studi</SelectItem>
-                {programStudiList.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
@@ -279,7 +267,7 @@ export default function RekapPage() {
                       {row.tingkat?.nama}
                     </span>
                   </td>
-                  <td className="py-4 px-4"><button className="text-[#50c878] hover:text-[#006400] text-[14px] font-medium flex items-center gap-1 transition-colors"><ExternalLink className="h-4 w-4" />Lihat</button></td>
+                  <td className="py-4 px-4"><Link href={`/akreditasi/rekap/detail/${row.id}`} className="text-[#50c878] hover:text-[#006400] text-[14px] font-medium flex items-center gap-1 transition-colors"><ExternalLink className="h-4 w-4" />Lihat</Link></td>
                 </tr>
               ))}
               {filteredData.length === 0 && !loading && (
@@ -300,6 +288,11 @@ export default function RekapPage() {
               <p className="text-[13px] text-gray-500">{row.mahasiswa?.nim}</p>
               <div className="flex gap-3 text-[12px] text-gray-400">
                 <span>{row.tahun} {row.semester}</span><span>·</span><span className="truncate max-w-[150px]">{row.namaPenyelenggara}</span>
+              </div>
+              <div className="pt-2 border-t border-gray-50 flex justify-end">
+                <Link href={`/akreditasi/rekap/detail/${row.id}`} className="text-[#50c878] hover:text-[#006400] text-[13px] font-medium flex items-center gap-1 transition-colors">
+                  <ExternalLink className="h-4 w-4" />Lihat
+                </Link>
               </div>
             </div>
           ))}
@@ -332,9 +325,10 @@ export default function RekapPage() {
             </DialogHeader>
             <div className="space-y-3 mt-2">
               {[
-                { mode: 'all' as const, title: `Semua Data (${allData.length} prestasi)`, desc: 'Export seluruh data' },
+                { mode: 'all' as const, title: `Semua Data (${allData.length} prestasi)`, desc: 'Export seluruh data TI' },
                 { mode: 'filtered' as const, title: `Data Terfilter (${filteredData.length} prestasi)`, desc: 'Export hanya data yang ditampilkan' },
-              ].map(opt => (
+                { mode: 'all_jurusan' as const, title: `Data Seluruh Jurusan (${rawAllData.length} prestasi)`, desc: 'Export seluruh data dari semua program studi' },
+              ].map((opt) => (
                 <button key={opt.mode} onClick={() => setExportMode(opt.mode)}
                   className={`w-full p-4 rounded-xl border-2 text-left transition-all ${exportMode === opt.mode ? 'border-[#50c878] bg-[#eafaf1]' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
                   <p className="text-[15px] font-semibold text-gray-900">{opt.title}</p>

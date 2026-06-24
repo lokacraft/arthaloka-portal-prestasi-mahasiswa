@@ -107,17 +107,15 @@ export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTa
 
     // Filter berdasarkan kategori menggunakan kategoriId relasi
     if (kategoriFilter && kategoriFilter !== 'Semua') {
-      // Cari ID kategori 'Akademik'
-      const katAkademik = await prisma.kategoriPrestasi.findFirst({
-        where: { nama: { contains: 'Akademik', mode: 'insensitive' } }
-      });
-
-      if (katAkademik) {
-        if (kategoriFilter === 'Akademik') {
-          query.kategoriId = katAkademik.id;
-        } else if (kategoriFilter === 'Non-Akademik') {
-          query.kategoriId = { not: katAkademik.id };
+      if (kategoriFilter === 'Akademik' || kategoriFilter === 'Non-Akademik') {
+        const katAkademik = await prisma.kategoriPrestasi.findFirst({
+          where: { nama: { contains: 'Akademik', mode: 'insensitive' } }
+        });
+        if (katAkademik) {
+          query.kategoriId = kategoriFilter === 'Akademik' ? katAkademik.id : { not: katAkademik.id };
         }
+      } else {
+        query.kategoriId = kategoriFilter;
       }
     }
 
@@ -157,7 +155,7 @@ export async function getRekapPrestasiAkreditasi(tahunSasaran: number, rentangTa
 // DATA UNTUK GRAFIK & REKAP (HALAMAN AKREDITASI)
 // ============================================================================
 
-export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: number = 5, programStudiId?: string) {
+export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: number = 5, programStudiId?: string, kategoriFilter?: string) {
   try {
     const startYear = tahunSasaran - rentangTahun + 1;
     
@@ -173,6 +171,19 @@ export async function getTrendPrestasi(tahunSasaran: number, rentangTahun: numbe
     // Filter program studi (untuk kaprodi)
     if (programStudiId && programStudiId !== 'Semua') {
       whereClause.programStudiId = programStudiId;
+    }
+
+    if (kategoriFilter && kategoriFilter !== 'Semua') {
+      if (kategoriFilter === 'Akademik' || kategoriFilter === 'Non-Akademik') {
+        const katAkademik = await prisma.kategoriPrestasi.findFirst({
+          where: { nama: { contains: 'Akademik', mode: 'insensitive' } }
+        });
+        if (katAkademik) {
+          whereClause.kategoriId = kategoriFilter === 'Akademik' ? katAkademik.id : { not: katAkademik.id };
+        }
+      } else {
+        whereClause.kategoriId = kategoriFilter;
+      }
     }
 
     const prestasiList = await prisma.prestasi.findMany({
@@ -248,11 +259,13 @@ export async function getRekapLengkap({
     
     // Filter Kategori
     if (kategoriId && kategoriId !== 'Semua') {
-      if (kategoriId === 'NON_AKADEMIK') {
+      if (kategoriId === 'Akademik' || kategoriId === 'Non-Akademik' || kategoriId === 'NON_AKADEMIK') {
         const katAkademik = await prisma.kategoriPrestasi.findFirst({
           where: { nama: { contains: 'Akademik', mode: 'insensitive' } }
         });
-        if (katAkademik) query.kategoriId = { not: katAkademik.id };
+        if (katAkademik) {
+          query.kategoriId = kategoriId === 'Akademik' ? katAkademik.id : { not: katAkademik.id };
+        }
       } else {
         query.kategoriId = kategoriId;
       }
@@ -266,7 +279,9 @@ export async function getRekapLengkap({
     let data = await prisma.prestasi.findMany({
       where: query,
       include: {
-        mahasiswa: true,
+        mahasiswa: {
+          include: { user: { select: { name: true, email: true } } },
+        },
         kategori: true,
         tingkat: true,
         programStudi: true,
@@ -336,5 +351,137 @@ export async function getProgramStudiByNama(nama: string) {
   } catch (error) {
     console.error("Error fetching program studi by nama:", error);
     return null;
+  }
+}
+
+// ============================================================================
+// DETAIL PRESTASI (untuk halaman detail kaprodi & WD)
+// ============================================================================
+
+export async function getPrestasiDetail(id: string) {
+  try {
+    return await prisma.prestasi.findUnique({
+      where: { id, statusValidasi: 'APPROVED' },
+      include: {
+        mahasiswa: {
+          include: {
+            user: { select: { name: true, email: true } },
+            programStudi: true,
+          },
+        },
+        kategori: true,
+        tingkat: true,
+        programStudi: true,
+        validator: { select: { name: true } },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching prestasi detail:', error);
+    throw new Error('Gagal mengambil detail prestasi');
+  }
+}
+
+// ============================================================================
+// TREN PER PRODI (untuk chart WD dashboard)
+// ============================================================================
+
+/** Mapping nama prodi → kunci pendek untuk chart key */
+function mapProdiKey(nama: string): string {
+  const n = nama.toLowerCase();
+  // Periksa 'rekayasa'/'manajemen' DULU — "Manajemen Rekayasa Industri" juga mengandung 'industri'
+  if (n.includes('rekayasa') || n.includes('manajemen')) return 'mri';
+  if (n.includes('logistik')) return 'tl';
+  if (n.includes('industri')) return 'ti';
+  return nama.substring(0, 3).toLowerCase().replace(/\s/g, '');
+}
+
+export async function getTrendPerProdi(tahunSasaran: number, rentangTahun: number = 5) {
+  try {
+    const startYear = tahunSasaran - rentangTahun + 1;
+
+    const prodiList = await prisma.programStudi.findMany({ orderBy: { nama: 'asc' } });
+
+    const prodiKeyMap: Record<string, string> = {};
+    prodiList.forEach((p) => { prodiKeyMap[p.id] = mapProdiKey(p.nama); });
+
+    const prestasiList = await prisma.prestasi.findMany({
+      where: {
+        statusValidasi: 'APPROVED',
+        tahun: { gte: startYear, lte: tahunSasaran },
+      },
+      select: { tahun: true, programStudiId: true },
+    });
+
+    // Inisialisasi struktur tren
+    const trendMap: Record<number, Record<string, number | string>> = {};
+    for (let y = startYear; y <= tahunSasaran; y++) {
+      trendMap[y] = { year: y.toString() };
+      prodiList.forEach((p) => { trendMap[y][prodiKeyMap[p.id]] = 0; });
+    }
+
+    prestasiList.forEach((p) => {
+      if (!p.programStudiId || !trendMap[p.tahun]) return;
+      const key = prodiKeyMap[p.programStudiId];
+      if (key) trendMap[p.tahun][key] = (trendMap[p.tahun][key] as number) + 1;
+    });
+
+    return {
+      data: Object.values(trendMap).sort((a, b) => parseInt(a.year as string) - parseInt(b.year as string)),
+      prodiList: prodiList.map((p) => ({ id: p.id, nama: p.nama, key: prodiKeyMap[p.id] })),
+    };
+  } catch (error) {
+    console.error('Error fetching trend per prodi:', error);
+    throw new Error('Gagal mengambil data tren per prodi');
+  }
+}
+
+// ============================================================================
+// DISTRIBUSI KATEGORI PER PRODI (untuk bar chart WD)
+// ============================================================================
+
+export async function getDistribusiKategoriPerProdi(startYear: number, endYear: number) {
+  try {
+    const prodiList = await prisma.programStudi.findMany({ orderBy: { nama: 'asc' } });
+
+    const prodiKeyMap: Record<string, string> = {};
+    prodiList.forEach((p) => { prodiKeyMap[p.id] = mapProdiKey(p.nama); });
+
+    const prestasiList = await prisma.prestasi.findMany({
+      where: {
+        statusValidasi: 'APPROVED',
+        tahun: { gte: startYear, lte: endYear },
+      },
+      select: {
+        programStudiId: true,
+        kategori: { select: { nama: true } },
+      },
+    });
+
+    // Inisialisasi: { 'Akademik': { ti: 0, tl: 0, mri: 0 }, 'Non Akademik': { ... } }
+    const result: Record<string, Record<string, number>> = {
+      Akademik: {},
+      'Non Akademik': {},
+    };
+    prodiList.forEach((p) => {
+      result['Akademik'][prodiKeyMap[p.id]] = 0;
+      result['Non Akademik'][prodiKeyMap[p.id]] = 0;
+    });
+
+    prestasiList.forEach((p) => {
+      if (!p.programStudiId) return;
+      const katNama = p.kategori?.nama ?? '';
+      const isAkademik = katNama.toLowerCase().includes('akademik') && !katNama.toLowerCase().includes('non');
+      const katKey = isAkademik ? 'Akademik' : 'Non Akademik';
+      const prodiKey = prodiKeyMap[p.programStudiId];
+      if (prodiKey) result[katKey][prodiKey] = (result[katKey][prodiKey] ?? 0) + 1;
+    });
+
+    return {
+      data: Object.entries(result).map(([label, counts]) => ({ label, ...counts })),
+      prodiList: prodiList.map((p) => ({ id: p.id, nama: p.nama, key: prodiKeyMap[p.id] })),
+    };
+  } catch (error) {
+    console.error('Error fetching distribusi kategori per prodi:', error);
+    throw new Error('Gagal mengambil data distribusi per prodi');
   }
 }

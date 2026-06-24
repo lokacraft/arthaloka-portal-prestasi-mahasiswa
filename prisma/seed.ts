@@ -57,9 +57,7 @@ async function main() {
   // =========================================================
   const kategoriList = [
     { nama: 'Akademik', keterangan: 'Olimpiade, Karya Tulis Ilmiah, Lomba Cerdas Cermat, dll.' },
-    { nama: 'Seni', keterangan: 'Tari, Paduan Suara, Melukis, Fotografi, dll.' },
-    { nama: 'Olahraga', keterangan: 'Futsal, Basket, E-Sports, Atletik, dll.' },
-    { nama: 'Keagamaan', keterangan: "MTQ, Hafiz Qur'an, dll." },
+    { nama: 'Non Akademik', keterangan: 'Tari, Paduan Suara, Melukis, Fotografi, dll.' }
   ];
 
   console.log('\n[3/5] Menambahkan data Kategori Prestasi...');
@@ -76,9 +74,7 @@ async function main() {
   // 4. Seeder untuk Tabel TINGKAT PRESTASI
   // =========================================================
   const tingkatList = [
-    { nama: 'Universitas', bobotPoin: 10 },
-    { nama: 'Kabupaten/Kota', bobotPoin: 20 },
-    { nama: 'Provinsi', bobotPoin: 30 },
+    { nama: 'Wilayah', bobotPoin: 30 },
     { nama: 'Nasional', bobotPoin: 40 },
     { nama: 'Internasional', bobotPoin: 50 },
   ];
