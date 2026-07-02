@@ -1,0 +1,25 @@
+LOG: CHANGELOG PEMBARUAN PORTAL PRESTASI MAHASISWA
+=============================================
+
+Rangkuman dari seluruh penyempurnaan, perbaikan, dan penambahan fitur yang telah diselesaikan di seluruh tahapan revisi aplikasi, yang telah diuji dan disiapkan untuk proses deployment.
+
+1. Tahap Revisi: Halaman Akreditasi
+-----------------------------------
+- Pengkhususan Program Studi: Menghilangkan opsi "Filter Program Studi" pada Dashboard dan Rekap Akreditasi, sehingga saat ini halaman tersebut sudah terfokus dan dikhususkan untuk menampilkan data Program Studi Teknik Industri (TI).
+- Pengubahan Istilah: Mengubah label teks "Target RI (%)" menjadi "Target Prestasi Internasional (RI)" agar lebih jelas dan informatif bagi pembaca.
+- Peningkatan Performa Grafik (Chart): Mengoptimalkan cara sistem memuat dan menghitung data untuk visualisasi grafik, sehingga halaman Dasbor Akreditasi kini terasa lebih ringan dan cepat dimuat (tidak memberatkan perangkat).
+- Fungsionalitas Ekspor Data Tambahan: Pada halaman Rekap Prestasi, opsi cetak Excel sekarang memiliki tiga pilihan akurat, yaitu: Export Seluruh Data (Khusus TI), Export Data yang Sedang Terfilter, dan opsi baru untuk mengekspor Seluruh Data Lintas Jurusan.
+
+2. Tahap Revisi: Dasbor Wakil Dekan (WD) & Kaprodi
+--------------------------------------------------
+- Pembaruan UI Indikator: Menambahkan komponen visual baru (Progress Bar, pewarnaan otomatis, dan icon) agar tingkat ketercapaian target langsung mudah dipahami pada pandangan pertama.
+- Scorecard Kalkulasi per Prodi: Menambahkan metrik "Score Card Indikator Akreditasi Berdasarkan Program Studi" secara spesifik di bawah Scorecard Utama. Saat ini capaian Rasio Internasional, Rasio Nasional, dan Rasio Wilayah akan langsung terkalkulasi secara otomatis untuk tiap-tiap program studi yang dipilih.
+
+3. Tahap Revisi: Halaman Admin
+------------------------------
+- Menu Pengaturan Target: Menyesuaikan tata letak (layout) Konfirmasi Edit Target. Area peringatan berbahaya ("Danger Area") yang memuat target kini tampil statis dan terlihat langsung di layar Dashboard Indikator Admin tanpa harus disembunyikan di dalam Pop-up.
+- Perbaikan Layout Antrean Verifikasi: Memperbaiki kendala tampilan tombol pada "Pagination" (navigasi halaman) yang sempat tidak sesuai standar UI dengan memperbarui struktur kodenya agar lebih mulus.
+
+4. Perbaikan General & Performa Sistem (Back-End)
+-------------------------------------------------
+- Quality Control (Kesiapan Deploy): Aplikasi telah melewati serangkaian pengetesan (TypeScript validation, Linting, dan Production Build) untuk memastikan struktur kodenya siap dan aman sebelum di deploy ke server utama.

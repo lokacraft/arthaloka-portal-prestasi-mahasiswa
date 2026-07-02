@@ -79,7 +79,7 @@ export function AppSidebar({
             Prestasi Fakultas Rekayasa Industri
           </h2>
           <span className="text-sm font-medium text-gray-500">
-            S1 Teknik Industri
+            S1 Teknik Industri, S1 Teknik Logistik, S1 Manajemen Rekayasa Industri
           </span>
         </div>
       </SidebarHeader>
