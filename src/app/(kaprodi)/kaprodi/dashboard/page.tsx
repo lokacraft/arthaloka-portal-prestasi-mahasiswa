@@ -443,7 +443,7 @@ export default function KaprodiDashboardPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-400 text-[11px]">—</td>
-                        <td className="px-4 py-3 text-gray-600">{d.tahun}</td>
+                        <td className="px-4 py-3 text-gray-600" rowSpan={anggota.length > 0 ? 2 : 1}>{d.tahun}</td>
                         <td className="px-4 py-3 text-center" rowSpan={anggota.length > 0 ? 2 : 1}>
                           <Link
                             href={`/kaprodi/dashboard/detail/${d.id}`}
@@ -470,7 +470,6 @@ export default function KaprodiDashboardPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 pb-3 pt-0 text-gray-600">{d.tahun}</td>
                         </tr>
                       )}
                     </React.Fragment>
