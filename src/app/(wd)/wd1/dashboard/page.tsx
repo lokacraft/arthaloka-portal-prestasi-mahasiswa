@@ -676,7 +676,7 @@ export default function WdDashboardPage() {
                       </tr>
                       {anggota.length > 0 && (
                         <tr className="border-b border-gray-50 bg-purple-50/30">
-                          <td colSpan={10} className="px-4 pb-3 pt-0 align-top">
+                          <td colSpan={11} className="px-4 pb-3 pt-0 align-top">
                             <div className="flex items-start gap-2">
                               <span className="text-[10px] font-semibold text-purple-500 tracking-wide mt-1 shrink-0">Anggota Tim</span>
                               <div className="flex flex-col gap-1.5">
