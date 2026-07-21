@@ -10,6 +10,7 @@ import { getRekapLengkap, getTrendPrestasi, getNmTs, getTargets, getProgramStudi
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, BarChart as RechartsBarChart, Bar } from 'recharts';
+import { computeIndikator43 } from '@/lib/lam-skor';
 
 function onSelectChange(setter: React.Dispatch<React.SetStateAction<any>>) {
   return (value: string | null) => { if (value !== null) setter(value); };
@@ -80,7 +81,15 @@ export default function KaprodiDashboardPage() {
       }
 
       setTotalPrestasi(details.length);
-      const uniqueNims = new Set(details.map((d: any) => d.mahasiswa?.nim).filter(Boolean));
+      const uniqueNims = new Set<string>();
+      details.forEach((d: any) => {
+        if (d.mahasiswa?.nim) uniqueNims.add(d.mahasiswa.nim);
+        if (d.tipePartisipasi === 'TIM' && Array.isArray(d.anggotaTim)) {
+          (d.anggotaTim as { nim: string; nama: string; angkatan?: number }[]).forEach((a) => {
+            if (a.nim) uniqueNims.add(a.nim);
+          });
+        }
+      });
       setUniqueMahasiswa(uniqueNims.size);
 
       let akadCount = 0; let nonAkadCount = 0;
@@ -116,11 +125,7 @@ export default function KaprodiDashboardPage() {
   const rnRasio = rasioAuto(rekapAuto.NN);
   const rwRasio = rasioAuto(rekapAuto.NW);
 
-  let targetMetCount = 0;
-  if (riRasio >= targets.RI) targetMetCount++;
-  if (rnRasio >= targets.RN) targetMetCount++;
-  if (rwRasio >= targets.RW) targetMetCount++;
-  const pctTarget = Math.round((targetMetCount / 3) * 100);
+
 
   const scorecardData = [
     { key: 'NI', label: 'Capaian Internasional (NI)', value: rekapAuto.NI.toString(), color: 'bg-[#eafaf1] text-[#22c55e]' },
@@ -130,6 +135,30 @@ export default function KaprodiDashboardPage() {
     { key: 'RN', label: `Rasio Nasional (Target: ${targets.RN}%)`, value: `${rnRasio.toFixed(2)}%`, color: rnRasio >= targets.RN ? 'bg-[#eafaf1] text-[#22c55e]' : 'bg-amber-50 text-amber-500' },
     { key: 'RW', label: `Rasio Wilayah (Target: ${targets.RW}%)`, value: `${rwRasio.toFixed(2)}%`, color: rwRasio >= targets.RW ? 'bg-[#eafaf1] text-[#22c55e]' : 'bg-amber-50 text-amber-500' },
   ];
+
+  // LAM TEKNIK Indikator 43 — Teknik Industri
+  const lamTI = (() => {
+    const akad = { NI: 0, NN: 0, NW: 0 };
+    const nonAkad = { NI: 0, NN: 0, NW: 0 };
+    prestasiList.forEach((d: any) => {
+      const katNama = d.kategori?.nama?.toLowerCase() || '';
+      const isAkademik = katNama.includes('akademik') && !katNama.includes('non');
+      const tk = d.tingkat?.nama?.toLowerCase() || '';
+      const tgt = isAkademik ? akad : nonAkad;
+      if (tk.includes('internasional')) tgt.NI++;
+      else if (tk.includes('nasional')) tgt.NN++;
+      else if (tk.includes('wilayah') || tk.includes('lokal')) tgt.NW++;
+    });
+    const NM = nmtsVal ?? 0;
+    const result = computeIndikator43(akad, nonAkad, nmtsVal, targets);
+    return {
+      akad,
+      nonAkad,
+      riAkad: NM > 0 ? (akad.NI / NM) * 100 : 0,
+      rnAkad: NM > 0 ? (akad.NN / NM) * 100 : 0,
+      ...result,
+    };
+  })();
 
   const chartConfig = {
     int: { label: "Internasional", color: CHART_COLORS.int },
@@ -188,7 +217,7 @@ export default function KaprodiDashboardPage() {
               <Award className="h-5 w-5" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900 mt-auto">{totalPrestasi}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-auto lg:m-auto lg:text-[40px]">{totalPrestasi}</p>
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] flex flex-col">
@@ -198,17 +227,52 @@ export default function KaprodiDashboardPage() {
               <Users className="h-5 w-5" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900 mt-auto">{uniqueMahasiswa}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-auto lg:m-auto lg:text-[40px]">{uniqueMahasiswa}</p>
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[14px] font-medium text-gray-500">Pencapaian Target LAM TEKNIK</p>
-            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-500 flex justify-center items-center">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="text-[14px] font-medium text-gray-500">Skor LAM TEKNIK</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Teknik Industri</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-500 flex justify-center items-center shrink-0">
               <Target className="h-5 w-5" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900 mt-auto">{pctTarget}%</p>
+          <div className="flex items-end gap-1">
+            <p className={`text-3xl font-bold leading-none ${
+              lamTI.isScore4 ? 'text-emerald-600' : 'text-gray-900'
+            }`}>
+              {nmtsVal ? lamTI.skorFinal.toFixed(2) : '—'}
+            </p>
+            {nmtsVal && <span className="text-gray-400 text-sm mb-0.5">/ 4</span>}
+          </div>
+          <span className={`mt-2 inline-flex self-start items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            lamTI.isScore4 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            {lamTI.isScore4 ? '✓ Memenuhi Skor 4' : 'Belum Skor 4'}
+          </span>
+          <div className="mt-auto pt-3 border-t border-gray-100 space-y-2">
+            <div className="grid grid-cols-2 gap-x-3 text-[11px]">
+              <div>
+                <span className="text-gray-400 block">Akademik</span>
+                <span className="font-bold text-indigo-600">{nmtsVal ? lamTI.skorAkad.toFixed(2) : '—'}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block">Non-Akademik</span>
+                <span className="font-bold text-purple-600">{nmtsVal ? lamTI.skorNonAkad.toFixed(2) : '—'}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 text-[11px] flex-wrap">
+              <span className={lamTI.riAkad > targets.RI ? 'text-emerald-600 font-medium' : 'text-red-400'}>
+                RI {lamTI.riAkad.toFixed(3)}%{lamTI.riAkad > targets.RI ? ' ✓' : ` (>${targets.RI}%)`}
+              </span>
+              <span className={lamTI.rnAkad > targets.RN ? 'text-emerald-600 font-medium' : 'text-red-400'}>
+                RN {lamTI.rnAkad.toFixed(3)}%{lamTI.rnAkad > targets.RN ? ' ✓' : ` (>${targets.RN}%)`}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -318,10 +382,12 @@ export default function KaprodiDashboardPage() {
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">NIM</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Angkatan</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Nama Prestasi</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Kategori</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Jenis</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Hasil</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tingkat</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tipe</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Anggota Tim</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tahun</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-600">Aksi</th>
               </tr>
@@ -329,50 +395,87 @@ export default function KaprodiDashboardPage() {
             <tbody>
               {pagedPrestasi.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={13} className="px-4 py-10 text-center text-gray-400">
                     Belum ada data prestasi valid pada periode ini.
                   </td>
                 </tr>
               ) : (
-                pagedPrestasi.map((d: any, idx: number) => (
-                  <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                    <td className="px-4 py-3 text-gray-400">{(tablePage - 1) * TABLE_PAGE_SIZE + idx + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{d.mahasiswa?.user?.name ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-[12px]">{d.mahasiswa?.nim ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-600">{d.angkatan}</td>
-                    <td className="px-4 py-3 text-gray-800 max-w-[180px] truncate" title={d.namaPrestasi}>{d.namaPrestasi}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">
-                        {d.jenisLomba === 'BELMAWA' ? 'Belmawa' : 'Mandiri'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{d.hasilCapaian}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#eafaf1] text-[#22c55e]">
-                        {d.tingkat?.nama ?? '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        d.tipePartisipasi === 'TIM'
-                          ? 'bg-purple-50 text-purple-600'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {d.tipePartisipasi === 'TIM' ? 'Tim' : 'Individu'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{d.tahun}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Link
-                        href={`/kaprodi/dashboard/detail/${d.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#50c878]/10 text-[#22c55e] hover:bg-[#50c878]/20 transition-colors text-[12px] font-medium"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Detail
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                pagedPrestasi.map((d: any, idx: number) => {
+                  const anggota: { nim: string; nama: string; angkatan?: number }[] =
+                    d.tipePartisipasi === 'TIM' && Array.isArray(d.anggotaTim)
+                      ? d.anggotaTim
+                      : [];
+                  return (
+                    <React.Fragment key={d.id}>
+                      <tr className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors${anggota.length > 0 ? ' border-b-0' : ''}`}>
+                        <td className="px-4 py-3 text-gray-400" rowSpan={anggota.length > 0 ? 2 : 1}>{(tablePage - 1) * TABLE_PAGE_SIZE + idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{d.mahasiswa?.user?.name ?? '-'}</td>
+                        <td className="px-4 py-3 text-gray-600 font-mono text-[12px]">{d.mahasiswa?.nim ?? '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{d.angkatan}</td>
+                        <td className="px-4 py-3 text-gray-800">{d.namaPrestasi}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            d.kategori?.nama?.toLowerCase().includes('non')
+                              ? 'bg-orange-50 text-orange-600'
+                              : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            {d.kategori?.nama ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">
+                            {d.jenisLomba === 'BELMAWA' ? 'Belmawa' : 'Mandiri'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{d.hasilCapaian}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#eafaf1] text-[#22c55e]">
+                            {d.tingkat?.nama ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            d.tipePartisipasi === 'TIM'
+                              ? 'bg-purple-50 text-purple-600'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {d.tipePartisipasi === 'TIM' ? 'Tim' : 'Individu'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-[11px]">—</td>
+                        <td className="px-4 py-3 text-gray-600">{d.tahun}</td>
+                        <td className="px-4 py-3 text-center" rowSpan={anggota.length > 0 ? 2 : 1}>
+                          <Link
+                            href={`/kaprodi/dashboard/detail/${d.id}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#50c878]/10 text-[#22c55e] hover:bg-[#50c878]/20 transition-colors text-[12px] font-medium"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Detail
+                          </Link>
+                        </td>
+                      </tr>
+                      {anggota.length > 0 && (
+                        <tr className="border-b border-gray-50 bg-purple-50/30">
+                          <td colSpan={9} className="px-4 pb-3 pt-0 align-top">
+                            <div className="flex items-start gap-2">
+                              <span className="text-[10px] font-semibold text-purple-500 tracking-wide mt-1 shrink-0">Anggota Tim</span>
+                              <div className="flex flex-col gap-1.5">
+                                {anggota.map((a, i) => (
+                                  <div key={i} className="flex items-center gap-3 bg-white border border-purple-100 rounded-lg px-3 py-1.5">
+                                    <span className="font-mono text-[12px] font-semibold text-purple-700">{a.nim}</span>
+                                    <span className="text-gray-700 text-[12px]">{a.nama}</span>
+                                    <span className="text-gray-400 text-[11px]">Angkatan {a.angkatan ?? d.angkatan}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 pb-3 pt-0 text-gray-600">{d.tahun}</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>

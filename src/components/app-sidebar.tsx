@@ -78,9 +78,11 @@ export function AppSidebar({
             <br />
             Prestasi Fakultas Rekayasa Industri
           </h2>
-          <span className="text-sm font-medium text-gray-500">
-            S1 Teknik Industri, S1 Teknik Logistik, S1 Manajemen Rekayasa Industri
-          </span>
+          <ul className="text-[13px] font-medium text-gray-500 list-disc list-inside mt-2 space-y-1">
+            <li>S1 Teknik Industri</li>
+            <li>S1 Teknik Logistik</li>
+            <li>S1 Manajemen Rekayasa Industri</li>
+          </ul>
         </div>
       </SidebarHeader>
       <Separator orientation="horizontal" />

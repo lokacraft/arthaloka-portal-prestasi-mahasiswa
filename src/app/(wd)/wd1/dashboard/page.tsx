@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, BarChart as RechartsBarChart, Bar } from 'recharts';
+import { computeIndikator43 } from '@/lib/lam-skor';
 
 function onSelectChange(setter: React.Dispatch<React.SetStateAction<any>>) {
   return (value: string | null) => { if (value !== null) setter(value); };
@@ -107,7 +108,15 @@ export default function WdDashboardPage() {
       }
 
       setTotalPrestasi(details.length);
-      const uniqueNims = new Set(details.map((d: any) => d.mahasiswa?.nim).filter(Boolean));
+      const uniqueNims = new Set<string>();
+      details.forEach((d: any) => {
+        if (d.mahasiswa?.nim) uniqueNims.add(d.mahasiswa.nim);
+        if (d.tipePartisipasi === 'TIM' && Array.isArray(d.anggotaTim)) {
+          (d.anggotaTim as { nim: string; nama: string; angkatan?: number }[]).forEach((a) => {
+            if (a.nim) uniqueNims.add(a.nim);
+          });
+        }
+      });
       setUniqueMahasiswa(uniqueNims.size);
 
       let akadCount = 0; let nonAkadCount = 0;
@@ -142,11 +151,7 @@ export default function WdDashboardPage() {
   const rnRasio = rasioAuto(rekapAuto.NN);
   const rwRasio = rasioAuto(rekapAuto.NW);
 
-  let targetMetCount = 0;
-  if (riRasio >= targets.RI) targetMetCount++;
-  if (rnRasio >= targets.RN) targetMetCount++;
-  if (rwRasio >= targets.RW) targetMetCount++;
-  const pctTarget = Math.round((targetMetCount / 3) * 100);
+
 
   const scorecardData = [
     { key: 'NI', label: 'Capaian Internasional (NI)', value: rekapAuto.NI.toString(), color: 'bg-[#eafaf1] text-[#22c55e]' },
@@ -180,6 +185,36 @@ export default function WdDashboardPage() {
         { label: `Nasional (${pNN})`, value: `${pRnRasio.toFixed(2)}%`, color: pRnRasio >= targets.RN ? 'bg-[#eafaf1] text-[#22c55e]' : 'bg-amber-50 text-amber-500' },
         { label: `Wilayah (${pNW})`, value: `${pRwRasio.toFixed(2)}%`, color: pRwRasio >= targets.RW ? 'bg-[#eafaf1] text-[#22c55e]' : 'bg-amber-50 text-amber-500' },
       ]
+    };
+  });
+
+  // LAM TEKNIK Indikator 43 — skor per prodi
+  const lamSkorPerProdi = prodiMetaList.map((prodi) => {
+    const prodiPrestasi = allPrestasiList.filter((d: any) => d.programStudiId === prodi.id);
+    const akad = { NI: 0, NN: 0, NW: 0 };
+    const nonAkad = { NI: 0, NN: 0, NW: 0 };
+    prodiPrestasi.forEach((d: any) => {
+      const katNama = d.kategori?.nama?.toLowerCase() || '';
+      const isAkademik = katNama.includes('akademik') && !katNama.includes('non');
+      const tk = d.tingkat?.nama?.toLowerCase() || '';
+      const tgt = isAkademik ? akad : nonAkad;
+      if (tk.includes('internasional')) tgt.NI++;
+      else if (tk.includes('nasional')) tgt.NN++;
+      else if (tk.includes('wilayah') || tk.includes('lokal')) tgt.NW++;
+    });
+    const NM = nmtsVal ?? 0;
+    const a = targets.RI / 100;
+    const b = targets.RN / 100;
+    const result = computeIndikator43(akad, nonAkad, nmtsVal, targets);
+    return {
+      prodi,
+      akad,
+      nonAkad,
+      riAkad: NM > 0 ? (akad.NI / NM) * 100 : 0,
+      rnAkad: NM > 0 ? (akad.NN / NM) * 100 : 0,
+      rwAkad: NM > 0 ? (akad.NW / NM) * 100 : 0,
+      meetsScore4Akad: NM > 0 && akad.NI / NM > a && akad.NN / NM > b,
+      ...result,
     };
   });
 
@@ -244,7 +279,7 @@ export default function WdDashboardPage() {
       </div>
 
       {/* Main Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <p className="text-[14px] font-medium text-gray-500">Total Prestasi Valid</p>
@@ -264,15 +299,84 @@ export default function WdDashboardPage() {
           </div>
           <p className="text-3xl font-bold text-gray-900 mt-auto">{uniqueMahasiswa}</p>
         </div>
+      </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[14px] font-medium text-gray-500">Pencapaian Target LAM TEKNIK</p>
-            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-500 flex justify-center items-center">
-              <Target className="h-5 w-5" />
+      {/* ── Skor LAM TEKNIK per Program Studi — Indikator 43 ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] p-6 md:p-8">
+        <div className="flex items-center gap-2 mb-1">
+          <Target className="h-5 w-5 text-purple-500" />
+          <h2 className="text-[16px] font-semibold text-gray-900">Skor LAM TEKNIK</h2>
+        </div>
+        <p className="text-[13px] text-gray-400 mb-5">
+          Prestasi akademik &amp; nonakademik per program studi · Total Mahasiswa (NM) = <span className="font-semibold text-gray-600">{nmtsVal ?? 'Belum diatur'}</span> · Skor = ((Akademik × 3) + Non-Akademik) / 4
+        </p>
+        {nmtsVal === null && (
+          <p className="text-amber-600 text-[13px] bg-amber-50 rounded-lg px-3 py-2 mb-5 border border-amber-100">
+            ⚠ Nilai NM(TS) belum diatur, skor tidak dapat dihitung. Silakan atur di Master Data.
+          </p>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {lamSkorPerProdi.map((item) => (
+            <div
+              key={item.prodi.id}
+              className={`rounded-xl border p-5 flex flex-col gap-3 ${
+                item.isScore4 ? 'border-emerald-100 bg-emerald-50/30' : 'border-gray-100 bg-gray-50/40'
+              }`}
+            >
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">LAM TEKNIK</p>
+                  <p className="text-[13px] font-semibold text-gray-800 mt-0.5 leading-tight">{item.prodi.nama}</p>
+                </div>
+                <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  item.isScore4 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {item.isScore4 ? '✓ Skor 4' : 'Belum 4'}
+                </span>
+              </div>
+
+              {/* Final Score */}
+              <div className="flex items-end gap-1">
+                <span className={`text-[40px] font-bold tracking-tight leading-none ${
+                  item.isScore4 ? 'text-emerald-600' : 'text-gray-900'
+                }`}>
+                  {nmtsVal ? item.skorFinal.toFixed(2) : '—'}
+                </span>
+                <span className="text-gray-400 text-[14px] mb-1.5">/ 4</span>
+              </div>
+
+              {/* Akademik Breakdown */}
+              <div className="rounded-lg bg-white border border-indigo-50 p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5">Akademik</span>
+                  <span className="text-[13px] font-bold text-gray-800">{nmtsVal ? item.skorAkad.toFixed(2) : '—'}</span>
+                </div>
+                <div className="flex gap-3 flex-wrap text-[11px]">
+                  <span className={item.riAkad > targets.RI ? 'text-emerald-600 font-medium' : 'text-red-400'}>
+                    RI {item.riAkad.toFixed(3)}%{item.riAkad > targets.RI ? ' ✓' : ` (>${targets.RI}%)`}
+                  </span>
+                  <span className={item.rnAkad > targets.RN ? 'text-emerald-600 font-medium' : 'text-red-400'}>
+                    RN {item.rnAkad.toFixed(3)}%{item.rnAkad > targets.RN ? ' ✓' : ` (>${targets.RN}%)`}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  NI: {item.akad.NI} · NN: {item.akad.NN} · NW: {item.akad.NW}
+                </p>
+              </div>
+
+              {/* Non-Akademik Breakdown */}
+              <div className="rounded-lg bg-white border border-purple-50 p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 rounded px-1.5 py-0.5">Non-Akademik</span>
+                  <span className="text-[13px] font-bold text-gray-800">{nmtsVal ? item.skorNonAkad.toFixed(2) : '—'}</span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  NI: {item.nonAkad.NI} · NN: {item.nonAkad.NN} · NW: {item.nonAkad.NW}
+                </p>
+              </div>
             </div>
-          </div>
-          <p className="text-3xl font-bold text-gray-900 mt-auto">{pctTarget}%</p>
+          ))}
         </div>
       </div>
 
@@ -497,10 +601,12 @@ export default function WdDashboardPage() {
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Angkatan</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Prodi</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Nama Prestasi</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Kategori</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Jenis</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Hasil</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tingkat</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tipe</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Anggota Tim</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Tahun</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-600">Aksi</th>
               </tr>
@@ -508,51 +614,88 @@ export default function WdDashboardPage() {
             <tbody>
               {pagedPrestasi.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={14} className="px-4 py-10 text-center text-gray-400">
                     Belum ada data prestasi valid pada periode ini.
                   </td>
                 </tr>
               ) : (
-                pagedPrestasi.map((d: any, idx: number) => (
-                  <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                    <td className="px-4 py-3 text-gray-400">{(tablePage - 1) * TABLE_PAGE_SIZE + idx + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{d.mahasiswa?.user?.name ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-[12px]">{d.mahasiswa?.nim ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-600">{d.angkatan}</td>
-                    <td className="px-4 py-3 text-gray-600 text-[12px]">{d.programStudi?.nama ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-800 max-w-[160px] truncate" title={d.namaPrestasi}>{d.namaPrestasi}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">
-                        {d.jenisLomba === 'BELMAWA' ? 'Belmawa' : 'Mandiri'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{d.hasilCapaian}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#eafaf1] text-[#22c55e]">
-                        {d.tingkat?.nama ?? '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        d.tipePartisipasi === 'TIM'
-                          ? 'bg-purple-50 text-purple-600'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {d.tipePartisipasi === 'TIM' ? 'Tim' : 'Individu'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{d.tahun}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Link
-                        href={`/wd1/dashboard/detail/${d.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#50c878]/10 text-[#22c55e] hover:bg-[#50c878]/20 transition-colors text-[12px] font-medium"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Detail
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                pagedPrestasi.map((d: any, idx: number) => {
+                  const anggota: { nim: string; nama: string; angkatan?: number }[] =
+                    d.tipePartisipasi === 'TIM' && Array.isArray(d.anggotaTim)
+                      ? d.anggotaTim
+                      : [];
+                  return (
+                    <React.Fragment key={d.id}>
+                      <tr className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors${anggota.length > 0 ? ' border-b-0' : ''}`}>
+                        <td className="px-4 py-3 text-gray-400" rowSpan={anggota.length > 0 ? 2 : 1}>{(tablePage - 1) * TABLE_PAGE_SIZE + idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{d.mahasiswa?.user?.name ?? '-'}</td>
+                        <td className="px-4 py-3 text-gray-600 font-mono text-[12px]">{d.mahasiswa?.nim ?? '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{d.angkatan}</td>
+                        <td className="px-4 py-3 text-gray-600 text-[12px]">{d.programStudi?.nama ?? '-'}</td>
+                        <td className="px-4 py-3 text-gray-800">{d.namaPrestasi}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            d.kategori?.nama?.toLowerCase().includes('non')
+                              ? 'bg-orange-50 text-orange-600'
+                              : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            {d.kategori?.nama ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">
+                            {d.jenisLomba === 'BELMAWA' ? 'Belmawa' : 'Mandiri'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{d.hasilCapaian}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#eafaf1] text-[#22c55e]">
+                            {d.tingkat?.nama ?? '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            d.tipePartisipasi === 'TIM'
+                              ? 'bg-purple-50 text-purple-600'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {d.tipePartisipasi === 'TIM' ? 'Tim' : 'Individu'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-[11px]">—</td>
+                        <td className="px-4 py-3 text-gray-600">{d.tahun}</td>
+                        <td className="px-4 py-3 text-center" rowSpan={anggota.length > 0 ? 2 : 1}>
+                          <Link
+                            href={`/wd1/dashboard/detail/${d.id}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#50c878]/10 text-[#22c55e] hover:bg-[#50c878]/20 transition-colors text-[12px] font-medium"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Detail
+                          </Link>
+                        </td>
+                      </tr>
+                      {anggota.length > 0 && (
+                        <tr className="border-b border-gray-50 bg-purple-50/30">
+                          <td colSpan={10} className="px-4 pb-3 pt-0 align-top">
+                            <div className="flex items-start gap-2">
+                              <span className="text-[10px] font-semibold text-purple-500 tracking-wide mt-1 shrink-0">Anggota Tim</span>
+                              <div className="flex flex-col gap-1.5">
+                                {anggota.map((a, i) => (
+                                  <div key={i} className="flex items-center gap-3 bg-white border border-purple-100 rounded-lg px-3 py-1.5">
+                                    <span className="font-mono text-[12px] font-semibold text-purple-700">{a.nim}</span>
+                                    <span className="text-gray-700 text-[12px]">{a.nama}</span>
+                                    <span className="text-gray-400 text-[11px]">Angkatan {a.angkatan ?? d.angkatan}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 pb-3 pt-0 text-gray-600">{d.tahun}</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
