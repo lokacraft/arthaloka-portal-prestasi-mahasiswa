@@ -52,7 +52,7 @@ export default async function AdminDashboardPage() {
     <div className="flex flex-col gap-6 pb-8 font-sans animate-in fade-in duration-500">
       <div>
         <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight">Dashboard Admin</h1>
-        <p className="text-gray-500 text-[15px] mt-1">Kelola dan verifikasi prestasi mahasiswa S1 Teknik Industri</p>
+        <p className="text-gray-500 text-[15px] mt-1">Kelola dan verifikasi prestasi mahasiswa Fakultas Rekayasa Industri</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

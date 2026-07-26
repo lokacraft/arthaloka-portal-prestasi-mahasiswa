@@ -586,7 +586,7 @@ export default function WdDashboardPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_15px_rgba(0,0,0,0.03)] p-6 md:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-[16px] font-semibold text-gray-900">Data Prestasi Valid — Semua Program Studi</h2>
+            <h2 className="text-[16px] font-semibold text-gray-900">Data Prestasi Valid - Semua Program Studi</h2>
             <p className="text-[13px] text-gray-500 mt-0.5">Periode {rentangLabel} · {allPrestasiList.length} data</p>
           </div>
         </div>
@@ -662,7 +662,9 @@ export default function WdDashboardPage() {
                             {d.tipePartisipasi === 'TIM' ? 'Tim' : 'Individu'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-400 text-[11px]">—</td>
+                        <td className="px-4 py-3 text-gray-600 font-medium">
+                          {d.tipePartisipasi === 'TIM' ? anggota.length : '-'}
+                        </td>
                         <td className="px-4 py-3 text-gray-600" rowSpan={anggota.length > 0 ? 2 : 1}>{d.tahun}</td>
                         <td className="px-4 py-3 text-center" rowSpan={anggota.length > 0 ? 2 : 1}>
                           <Link
